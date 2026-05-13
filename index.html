@@ -198,6 +198,31 @@
         </div>
       </div>
 
+      <!-- Custom HTML Sender -->
+      <div class="card" style="display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:rgba(99,102,241,0.15);color:#818cf8;margin-bottom:8px;display:inline-block;">CUSTOM SEND</span>
+          <h3 style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0 0 4px;">Send Any HTML Email</h3>
+          <p style="font-size:13px;color:#475569;margin:0;">Paste any HTML email below and send it to your subscriber list.</p>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Subject Line</label>
+          <input class="input" id="custom-tpl-subject" placeholder="e.g. Introducing our new service..." />
+        </div>
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Paste HTML here</label>
+          <textarea class="input" id="custom-tpl-html" rows="8" placeholder="Paste your full HTML email code here..."></textarea>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="previewCustomTemplate()" style="font-size:13px;">👁 Preview</button>
+          <button class="btn btn-green" onclick="sendCustomTemplate()" id="custom-send-btn" style="font-size:13px;">📤 Send to Subscribers</button>
+        </div>
+        <div id="custom-tpl-progress" style="display:none;">
+          <div style="font-size:13px;color:#94a3b8;margin-bottom:8px;" id="custom-tpl-status">Sending...</div>
+          <div class="progress-bar"><div class="progress-fill" id="custom-tpl-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+
       <!-- Preview modal -->
       <div id="template-preview-modal" style="display:none;" class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
@@ -1761,6 +1786,68 @@ const STATIC_TEMPLATES = {
 </body>
 </html>`
   }
+}
+
+function previewCustomTemplate() {
+  const html = document.getElementById('custom-tpl-html').value.trim()
+  if (!html) { toast('Paste your HTML first', 'error'); return }
+  const modal = document.getElementById('template-preview-modal')
+  const frame = document.getElementById('template-preview-frame')
+  modal.style.display = 'block'
+  frame.srcdoc = html
+  modal.scrollIntoView({ behavior: 'smooth' })
+}
+
+async function sendCustomTemplate() {
+  const subject = document.getElementById('custom-tpl-subject').value.trim()
+  const html = document.getElementById('custom-tpl-html').value.trim()
+  if (!subject) { toast('Add a subject line first', 'error'); return }
+  if (!html) { toast('Paste your HTML first', 'error'); return }
+
+  const s = JSON.parse(localStorage.getItem('neta_settings') || '{}')
+  Object.assign(settings, s)
+  if (!settings.ejsPublicKey || !settings.ejsServiceId || !settings.ejsTemplateId) {
+    toast('Set up EmailJS in Settings first', 'error')
+    showPage('settings')
+    return
+  }
+
+  const activeSubscribers = subscribers.filter(s => s.active !== false)
+  if (!activeSubscribers.length) { toast('No subscribers to send to', 'error'); return }
+  if (!confirm(`Send "${subject}" to ${activeSubscribers.length} subscribers?`)) return
+
+  emailjs.init(settings.ejsPublicKey)
+
+  const btn = document.getElementById('custom-send-btn')
+  const progressEl = document.getElementById('custom-tpl-progress')
+  const statusEl = document.getElementById('custom-tpl-status')
+  const barEl = document.getElementById('custom-tpl-bar')
+
+  btn.disabled = true
+  progressEl.style.display = 'block'
+
+  let sent = 0, failed = 0
+  for (let i = 0; i < activeSubscribers.length; i++) {
+    const sub = activeSubscribers[i]
+    statusEl.textContent = `Sending ${i+1} of ${activeSubscribers.length}...`
+    barEl.style.width = `${Math.round((i / activeSubscribers.length) * 100)}%`
+    try {
+      await emailjs.send(settings.ejsServiceId, settings.ejsTemplateId, {
+        to_email: sub.email,
+        to_name: [sub.first_name, sub.last_name].filter(Boolean).join(' ') || sub.email,
+        subject,
+        html_content: html,
+        from_name: settings.fromName || 'Neta Virtual Team',
+      })
+      sent++
+    } catch(e) { console.error(e); failed++ }
+    await new Promise(r => setTimeout(r, 300))
+  }
+
+  barEl.style.width = '100%'
+  statusEl.textContent = `Done -- ${sent} sent${failed ? `, ${failed} failed` : ''}`
+  btn.disabled = false
+  toast(`Done -- ${sent} sent${failed ? `, ${failed} failed` : ''}`, sent > 0 ? 'success' : 'error')
 }
 
 function previewTemplate(key) {
