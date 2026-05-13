@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neta Newsletter Bot</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        brand: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { background: #0a0f1a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 24px; }
+  .input { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 8px 12px; color: #f1f5f9; width: 100%; font-size: 14px; outline: none; }
+  .input:focus { border-color: #3b82f6; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: #1f2937; color: #cbd5e1; }
+  .btn-secondary:hover { background: #374151; }
+  .btn-danger { background: rgba(127,29,29,0.4); color: #f87171; }
+  .btn-danger:hover { background: rgba(127,29,29,0.6); }
+  .tab { padding: 6px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: #94a3b8; }
+  .tab.active { background: #2563eb; color: white; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: #64748b; cursor: pointer; transition: all 0.15s; }
+  .sidebar-link:hover { color: #cbd5e1; background: #1f2937; }
+  .sidebar-link.active { color: #60a5fa; background: rgba(37,99,235,0.15); font-weight: 500; }
+  .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; animation: slideIn 0.2s ease; }
+  .toast.success { background: #064e3b; color: #6ee7b7; border: 1px solid #065f46; }
+  .toast.error { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
+  @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  pre { white-space: pre-wrap; word-break: break-word; }
+  textarea { resize: vertical; }
+</style>
+</head>
+<body>
+
+<div class="flex min-h-screen">
+  <!-- Sidebar -->
+  <aside style="width:220px;min-height:100vh;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;flex-shrink:0;">
+    <div style="padding:20px 16px;border-bottom:1px solid #1f2937;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">📬</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#f1f5f9;">Neta Newsletter</div>
+          <div style="font-size:11px;color:#475569;">AU Accounting Focus</div>
+        </div>
+      </div>
+    </div>
+    <nav style="flex:1;padding:12px 8px;display:flex;flex-direction:column;gap:2px;">
+      <div class="sidebar-link active" onclick="showPage('dashboard')" id="nav-dashboard">📊 Dashboard</div>
+      <div class="sidebar-link" onclick="showPage('generate')" id="nav-generate">✨ Generate</div>
+      <div class="sidebar-link" onclick="showPage('campaigns')" id="nav-campaigns">📋 Campaigns</div>
+      <div class="sidebar-link" onclick="showPage('subscribers')" id="nav-subscribers">👥 Subscribers</div>
+      <div class="sidebar-link" onclick="showPage('settings')" id="nav-settings">⚙️ Settings</div>
+    </nav>
+    <div style="padding:12px 16px;border-top:1px solid #1f2937;">
+      <div style="font-size:11px;color:#334155;">netavirtualteam.com.au</div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main style="flex:1;overflow:auto;">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" class="p-8 space-y-6">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;">Dashboard</h1>
+        <p style="font-size:13px;color:#475569;margin-top:4px;">AU Accounting & Finance Newsletter</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="card text-center">
+          <div id="stat-campaigns" style="font-size:28px;font-weight:700;color:#f1f5f9;">0</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">Campaigns Generated</div>
+        </div>
+        <div class="card text-center">
+          <div id="stat-subscribers" style="font-size:28px;font-weight:700;color:#f1f5f9;">0</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">Subscribers</div>
+        </div>
+        <div class="card text-center">
+          <div id="stat-approved" style="font-size:28px;font-weight:700;color:#f1f5f9;">0</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">Approved & Sent</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:16px;">Writing Style Guide — AU Accountants & CFOs</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div style="background:#1f2937;border-radius:8px;padding:16px;">
+            <div style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:8px;">Tone</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.6;">Analytical, data-first, ROI-focused. No fluff. Treat the reader as a peer — they are.</div>
+          </div>
+          <div style="background:#1f2937;border-radius:8px;padding:16px;">
+            <div style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:8px;">Structure</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.6;">Hook with stat → insight → mid CTA → actionable takeaways → closing → soft sell.</div>
+          </div>
+          <div style="background:#1f2937;border-radius:8px;padding:16px;">
+            <div style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:8px;">What Works</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.6;">ATO updates, cash flow pressure, headcount costs, BAS/compliance, time-to-value for admin.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin-bottom:12px;">Recent Campaigns</h2>
+        <div id="dashboard-campaigns" style="color:#475569;font-size:13px;text-align:center;padding:24px 0;">
+          No campaigns yet. Go to Generate to create your first one.
+        </div>
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <div id="page-generate" class="p-8 space-y-6" style="display:none;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;">Generate Campaign</h1>
+        <p style="font-size:13px;color:#475569;margin-top:4px;">AI writes A/B newsletter variants from current AU accounting news</p>
+      </div>
+
+      <div class="card space-y-4">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;">Campaign Brief</h2>
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Topic Focus (optional — leave blank for auto)</label>
+          <input class="input" id="gen-topic" placeholder="e.g. ATO compliance changes, cash flow management, hiring bottlenecks..." />
+        </div>
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Audience</label>
+          <select class="input" id="gen-audience">
+            <option value="accounting">AU Accountants & CFOs (SMEs)</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="generateCampaign()" id="gen-btn" style="display:flex;align-items:center;gap:8px;width:fit-content;">
+          ✨ Generate Campaign
+        </button>
+      </div>
+
+      <div id="gen-loading" style="display:none;" class="card">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="spinner"></div>
+          <div>
+            <div style="font-size:14px;font-weight:500;color:#60a5fa;" id="gen-loading-text">Fetching AU accounting news…</div>
+            <div style="font-size:12px;color:#475569;margin-top:2px;">This takes 20-40 seconds — Gemini is writing both variants and the QA rationale.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="gen-result" style="display:none;"></div>
+    </div>
+
+    <!-- CAMPAIGNS -->
+    <div id="page-campaigns" class="p-8 space-y-6" style="display:none;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;">Campaigns</h1>
+        <p style="font-size:13px;color:#475569;margin-top:4px;">Review, approve, and export your newsletters</p>
+      </div>
+      <div id="campaigns-list">
+        <div style="color:#475569;font-size:13px;text-align:center;padding:40px 0;" class="card">
+          No campaigns yet. Go to Generate to create your first one.
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBSCRIBERS -->
+    <div id="page-subscribers" class="p-8 space-y-6" style="display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;">Subscribers</h1>
+          <p style="font-size:13px;color:#475569;margin-top:4px;">Manage your newsletter list</p>
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('add-sub-form').style.display='block'">+ Add Subscriber</button>
+      </div>
+
+      <div id="add-sub-form" style="display:none;" class="card space-y-3">
+        <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;">Add Subscriber</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <input class="input" id="sub-email" placeholder="Email *" />
+          <input class="input" id="sub-company" placeholder="Company" />
+          <input class="input" id="sub-firstname" placeholder="First Name" />
+          <input class="input" id="sub-lastname" placeholder="Last Name" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="addSubscriber()">Add</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('add-sub-form').style.display='none'">Cancel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin-bottom:12px;">📂 Import CSV</h3>
+        <p style="font-size:12px;color:#475569;margin-bottom:12px;">CSV must have an <code style="background:#1f2937;padding:1px 6px;border-radius:4px;">email</code> column. Optional: first_name, last_name, company</p>
+        <input type="file" accept=".csv" onchange="importCSV(this)" style="font-size:13px;color:#94a3b8;" />
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;">Subscriber List (<span id="sub-count">0</span>)</h3>
+          <button class="btn btn-secondary" onclick="exportSubscribers()" style="font-size:12px;padding:4px 12px;">Export CSV</button>
+        </div>
+        <div id="sub-table" style="overflow-x:auto;"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" class="p-8 space-y-6" style="display:none;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;">Settings</h1>
+        <p style="font-size:13px;color:#475569;margin-top:4px;">Configure your API key and preferences</p>
+      </div>
+
+      <div class="card space-y-4" style="max-width:600px;">
+        <div style="display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid #1f2937;">
+          <span style="font-size:16px;">🔑</span>
+          <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;">Gemini API Key</h2>
+        </div>
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Google Gemini API Key</label>
+          <input class="input" id="settings-gemini-key" type="password" placeholder="AIzaSy..." />
+          <p style="font-size:11px;color:#334155;margin-top:6px;">Get a free key at aistudio.google.com → Get API Key. No card needed.</p>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()" style="width:fit-content;">Save Settings</button>
+      </div>
+
+      <div class="card" style="max-width:600px;">
+        <div style="display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid #1f2937;margin-bottom:16px;">
+          <span style="font-size:16px;">📧</span>
+          <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;">Email Sending</h2>
+        </div>
+        <div style="background:#1f2937;border-radius:8px;padding:16px;font-size:13px;color:#94a3b8;line-height:1.7;">
+          <p style="font-weight:600;color:#e2e8f0;margin-bottom:8px;">How to send emails from this app:</p>
+          <p>This HTML file generates the newsletter content. To send it:</p>
+          <ol style="margin-top:8px;padding-left:20px;space-y:4px;">
+            <li>Generate & approve a campaign</li>
+            <li>Click <strong style="color:#60a5fa;">Copy Email HTML</strong> on the approved campaign</li>
+            <li>Paste into Mailchimp, Campaign Monitor, or your email client</li>
+          </ol>
+          <p style="margin-top:12px;font-size:12px;color:#475569;">For automated sending, the full Python backend handles SMTP. This file is for content generation and QA.</p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:600px;">
+        <div style="display:flex;align-items:center;gap:8px;padding-bottom:12px;border-bottom:1px solid #1f2937;margin-bottom:16px;">
+          <span style="font-size:16px;">📡</span>
+          <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;">News Sources</h2>
+        </div>
+        <ul style="font-size:13px;color:#64748b;space-y:4px;line-height:2;">
+          <li>• Australian Tax Office (ATO)</li>
+          <li>• Accountants Daily</li>
+          <li>• CPA Australia</li>
+          <li>• ABC News Business</li>
+          <li>• Smart Company AU</li>
+          <li>• MYOB Blog AU</li>
+        </ul>
+        <p style="font-size:12px;color:#334155;margin-top:12px;">News is sourced and summarised automatically each time you generate a campaign.</p>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+let campaigns = JSON.parse(localStorage.getItem('neta_campaigns') || '[]')
+let subscribers = JSON.parse(localStorage.getItem('neta_subscribers') || '[]')
+let settings = JSON.parse(localStorage.getItem('neta_settings') || '{}')
+
+function save() {
+  localStorage.setItem('neta_campaigns', JSON.stringify(campaigns))
+  localStorage.setItem('neta_subscribers', JSON.stringify(subscribers))
+  localStorage.setItem('neta_settings', JSON.stringify(settings))
+}
+
+// ── Navigation ────────────────────────────────────────────────────
+function showPage(page) {
+  ['dashboard','generate','campaigns','subscribers','settings'].forEach(p => {
+    document.getElementById('page-' + p).style.display = p === page ? '' : 'none'
+    document.getElementById('nav-' + p).classList.toggle('active', p === page)
+  })
+  if (page === 'dashboard') refreshDashboard()
+  if (page === 'campaigns') renderCampaigns()
+  if (page === 'subscribers') renderSubscribers()
+  if (page === 'settings') loadSettings()
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.createElement('div')
+  el.className = 'toast ' + type
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 3000)
+}
+
+// ── Settings ──────────────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('settings-gemini-key').value = settings.geminiKey || ''
+}
+
+function saveSettings() {
+  settings.geminiKey = document.getElementById('settings-gemini-key').value.trim()
+  save()
+  toast('Settings saved')
+}
+
+// ── News fetcher (via Gemini) ─────────────────────────────────────
+const AU_NEWS_CONTEXT = `
+Recent AU accounting and finance context (as of 2025):
+- ATO is cracking down on work-from-home deductions and record-keeping
+- Many SME accountants report 30-40% of time lost to admin and client onboarding
+- Super guarantee rate increased to 11.5%, compliance burden rising for small firms
+- BAS lodgement errors costing SMEs an average $4,200 in penalties annually
+- Skills shortage in AU finance sector — average time to fill a finance role is 47 days
+- MYOB/Xero automation is helping but implementation is slow at firms with 1-5 staff
+- Cash flow pressure hitting AU construction and hospitality clients of accounting firms
+- ATO's e-invoicing push causing confusion among SME clients
+`
+
+// ── Generate Campaign ─────────────────────────────────────────────
+async function generateCampaign() {
+  const key = settings.geminiKey
+  if (!key) {
+    toast('Add your Gemini API key in Settings first', 'error')
+    showPage('settings')
+    return
+  }
+
+  const topic = document.getElementById('gen-topic').value.trim()
+  const btn = document.getElementById('gen-btn')
+  const loading = document.getElementById('gen-loading')
+  const result = document.getElementById('gen-result')
+
+  btn.disabled = true
+  loading.style.display = 'block'
+  result.style.display = 'none'
+
+  const steps = [
+    'Fetching AU accounting news…',
+    'Analysing key industry angles…',
+    'Writing Variant A (analytical)…',
+    'Writing Variant B (narrative)…',
+    'Generating QA rationale…'
+  ]
+  let stepIdx = 0
+  const stepEl = document.getElementById('gen-loading-text')
+  const stepTimer = setInterval(() => {
+    stepIdx = (stepIdx + 1) % steps.length
+    stepEl.textContent = steps[stepIdx]
+  }, 4000)
+
+  try {
+    const prompt = buildPrompt(topic)
+    const response = await callGemini(key, prompt)
+    const data = parseGeminiResponse(response)
+
+    clearInterval(stepTimer)
+
+    const campaign = {
+      id: Date.now(),
+      title: data.variantA.subject_line || 'Newsletter Campaign',
+      status: 'pending_qa',
+      createdAt: new Date().toISOString(),
+      topic: topic || 'AU Accounting',
+      variantA: data.variantA,
+      variantB: data.variantB,
+      rationale: data.rationale,
+      sources: data.sources || [],
+    }
+
+    campaigns.unshift(campaign)
+    save()
+
+    loading.style.display = 'none'
+    btn.disabled = false
+    result.style.display = 'block'
+    result.innerHTML = renderQAPanel(campaign)
+
+    refreshDashboard()
+    toast('Campaign generated — review below')
+
+  } catch(e) {
+    clearInterval(stepTimer)
+    loading.style.display = 'none'
+    btn.disabled = false
+    toast('Generation failed: ' + e.message, 'error')
+    console.error(e)
+  }
+}
+
+function buildPrompt(topic) {
+  const topicLine = topic ? `Focus this newsletter on: ${topic}` : 'Choose the most timely and relevant topic for AU accountants right now.'
+  return `You are an expert B2B newsletter writer for Neta Virtual Team, an Australian offshore staffing company.
+
+TARGET AUDIENCE: Australian accountants, CFOs, and finance managers at SMEs
+TONE: Analytical, data-first, ROI-focused, concise. No fluff, no exclamation marks. Australian English.
+FORMAT: Short paragraphs (2-3 sentences max), bullet points for takeaways.
+FRAME EVERYTHING around: time saved, risk reduced, cost cut.
+
+${topicLine}
+
+INDUSTRY CONTEXT:
+${AU_NEWS_CONTEXT}
+
+COMPANY CTAs (use one per variant, subtly):
+- "Run the numbers on how much your firm is losing to admin overhead — netavirtualteam.com.au/calculator"
+- "See how other AU accounting firms are building leaner ops — netavirtualteam.com.au"
+- "Find out what a Virtual Professional could take off your plate — netavirtualteam.com.au"
+- "Build a role plan that fits your firm's next stage — netavirtualteam.com.au"
+
+STRUCTURE (content sandwich):
+1. HOOK — one sharp sentence with a stat or industry friction point
+2. INSIGHT — 2-3 paragraphs: what's happening in AU accounting, what does it mean?
+3. MID CTA — one subtle sentence framed as "what others are doing"
+4. TAKEAWAYS — 4-5 specific, actionable bullet points
+5. CLOSING — one paragraph tying it to firm growth
+6. END CTA — soft sell linking to netavirtualteam.com.au
+
+Generate TWO variants:
+- VARIANT A: Analytical angle — data-heavy, precision tone, like a trusted industry memo
+- VARIANT B: Narrative angle — scenario-based, slightly more conversational, different hook and CTA from A
+
+Return ONLY valid JSON in this exact format:
+{
+  "variantA": {
+    "subject_line": "...",
+    "hook": "...",
+    "insight": "...",
+    "mid_cta": "...",
+    "takeaways": ["...", "...", "...", "...", "..."],
+    "closing": "...",
+    "end_cta": "...",
+    "angle": "brief label e.g. compliance risk framing"
+  },
+  "variantB": {
+    "subject_line": "...",
+    "hook": "...",
+    "insight": "...",
+    "mid_cta": "...",
+    "takeaways": ["...", "...", "...", "...", "..."],
+    "closing": "...",
+    "end_cta": "...",
+    "angle": "brief label e.g. capacity bottleneck narrative"
+  },
+  "rationale": "3-4 sentences: why this topic is timely for AU accountants, what the A/B test is designed to learn, and what success looks like for Neta's brand positioning.",
+  "style_note": "2 sentences on why this writing style works for CFOs and accountants specifically.",
+  "sources": [{"title": "...", "source": "ATO / CPA Australia / etc"}]
+}`
+}
+
+async function callGemini(key, prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`
+  const body = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.8, maxOutputTokens: 3000 }
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  if (!res.ok) {
+    const err = await res.json()
+    throw new Error(err.error?.message || 'Gemini API error')
+  }
+  return res.json()
+}
+
+function parseGeminiResponse(response) {
+  const text = response.candidates?.[0]?.content?.parts?.[0]?.text || ''
+  const jsonMatch = text.match(/\{[\s\S]*\}/)
+  if (!jsonMatch) throw new Error('Could not parse AI response. Try again.')
+  return JSON.parse(jsonMatch[0])
+}
+
+// ── QA Panel ──────────────────────────────────────────────────────
+function renderQAPanel(campaign) {
+  const va = campaign.variantA || {}
+  const vb = campaign.variantB || {}
+  const statusColor = {
+    pending_qa: '#f59e0b',
+    approved: '#3b82f6',
+    sent: '#10b981',
+  }[campaign.status] || '#64748b'
+
+  return `
+  <div class="card space-y-6">
+    <div style="display:flex;align-items:start;justify-content:space-between;gap:16px;">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:${statusColor}22;color:${statusColor};">
+            ${campaign.status.replace('_',' ').toUpperCase()}
+          </span>
+          <span style="font-size:12px;color:#475569;">${new Date(campaign.createdAt).toLocaleDateString('en-AU')}</span>
+        </div>
+        <h2 style="font-size:17px;font-weight:700;color:#f1f5f9;">${campaign.title}</h2>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;">
+        ${campaign.status === 'pending_qa' ? `<button class="btn btn-primary" onclick="approveCampaign(${campaign.id})">✓ Approve</button>` : ''}
+        <button class="btn btn-secondary" onclick="copyEmailHTML(${campaign.id})" style="font-size:13px;">📋 Copy Email HTML</button>
+        <button class="btn btn-danger" onclick="deleteCampaign(${campaign.id})" style="font-size:13px;">🗑</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;">
+      <!-- QA Analysis -->
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">💡 Why This Campaign Works</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.7;">${campaign.rationale || '—'}</p>
+        </div>
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">✍️ Writing Style & Angle</div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#475569;margin-bottom:4px;">Variant A Angle</div>
+            <span style="font-size:12px;background:rgba(37,99,235,0.15);color:#60a5fa;padding:2px 10px;border-radius:999px;">${va.angle || '—'}</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#475569;margin-bottom:4px;">Variant B Angle</div>
+            <span style="font-size:12px;background:rgba(37,99,235,0.15);color:#60a5fa;padding:2px 10px;border-radius:999px;">${vb.angle || '—'}</span>
+          </div>
+          <p style="font-size:12px;color:#64748b;line-height:1.6;margin-top:8px;">${campaign.style_note || 'Analytical + data-first approach matches CFO decision-making patterns.'}</p>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid #374151;">
+            <div style="font-size:11px;color:#475569;margin-bottom:4px;">A/B Test Design</div>
+            <p style="font-size:12px;color:#64748b;">A = analytical/data-led · B = narrative/scenario-led. Tests CFO preference for precision vs context-first framing.</p>
+          </div>
+        </div>
+        ${campaign.sources?.length ? `
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">📎 Sources</div>
+          ${campaign.sources.map(s => `
+            <div style="margin-bottom:8px;">
+              <div style="font-size:12px;color:#e2e8f0;font-weight:500;">${s.title}</div>
+              <div style="font-size:11px;color:#475569;">${s.source}</div>
+            </div>
+          `).join('')}
+        </div>` : ''}
+      </div>
+
+      <!-- Newsletter Preview with A/B tabs -->
+      <div>
+        <div style="display:flex;align-items:center;gap:4px;background:#1f2937;border-radius:8px;padding:4px;width:fit-content;margin-bottom:16px;">
+          <div class="tab active" id="tab-a-${campaign.id}" onclick="switchTab(${campaign.id},'a')">Variant A — Analytical</div>
+          <div class="tab" id="tab-b-${campaign.id}" onclick="switchTab(${campaign.id},'b')">Variant B — Narrative</div>
+        </div>
+        <div id="preview-a-${campaign.id}">
+          ${renderVariantPreview(va, campaign.variantA?.subject_line)}
+        </div>
+        <div id="preview-b-${campaign.id}" style="display:none;">
+          ${renderVariantPreview(vb, campaign.variantB?.subject_line)}
+        </div>
+      </div>
+    </div>
+  </div>`
+}
+
+function renderVariantPreview(v, subject) {
+  if (!v) return '<p style="color:#475569;font-size:13px;">No variant data</p>'
+  return `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="background:#1f2937;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Subject Line</div>
+        <div style="font-size:14px;font-weight:600;color:#f1f5f9;">"${subject || v.subject_line || ''}"</div>
+      </div>
+      <div style="border-left:3px solid #2563eb;padding-left:14px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Hook</div>
+        <div style="font-size:13px;color:#e2e8f0;font-style:italic;line-height:1.7;">${v.hook || ''}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Insight</div>
+        <div style="font-size:13px;color:#94a3b8;line-height:1.7;">${(v.insight || '').replace(/\n/g,'<br/>')}</div>
+      </div>
+      <div style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.2);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#38bdf8;margin-bottom:4px;">Mid CTA</div>
+        <div style="font-size:13px;color:#94a3b8;">${v.mid_cta || ''}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#475569;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Key Takeaways</div>
+        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:6px;">
+          ${(v.takeaways || []).map(t => `
+            <li style="display:flex;align-items:start;gap:8px;font-size:13px;color:#94a3b8;">
+              <span style="color:#2563eb;flex-shrink:0;margin-top:2px;">•</span>${t}
+            </li>`).join('')}
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Closing</div>
+        <div style="font-size:13px;color:#94a3b8;line-height:1.7;">${v.closing || ''}</div>
+      </div>
+      <div style="background:#1f2937;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">End CTA</div>
+        <div style="font-size:13px;color:#94a3b8;">${v.end_cta || ''}</div>
+      </div>
+    </div>`
+}
+
+function switchTab(id, variant) {
+  document.getElementById(`preview-a-${id}`).style.display = variant === 'a' ? '' : 'none'
+  document.getElementById(`preview-b-${id}`).style.display = variant === 'b' ? '' : 'none'
+  document.getElementById(`tab-a-${id}`).className = 'tab' + (variant === 'a' ? ' active' : '')
+  document.getElementById(`tab-b-${id}`).className = 'tab' + (variant === 'b' ? ' active' : '')
+}
+
+// ── Campaign Actions ───────────────────────────────────────────────
+function approveCampaign(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (c) { c.status = 'approved'; save(); toast('Campaign approved'); showPage('generate'); generateCampaign; renderCampaigns(); refreshDashboard() }
+}
+
+function deleteCampaign(id) {
+  if (!confirm('Delete this campaign?')) return
+  campaigns = campaigns.filter(c => c.id !== id)
+  save()
+  renderCampaigns()
+  refreshDashboard()
+  document.getElementById('gen-result').style.display = 'none'
+  toast('Campaign deleted')
+}
+
+function copyEmailHTML(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const va = c.variantA || {}
+  const html = buildEmailHTML(va, c.variantA?.subject_line)
+  navigator.clipboard.writeText(html).then(() => {
+    toast('Email HTML copied to clipboard — paste into Mailchimp or Gmail')
+  }).catch(() => {
+    toast('Copy failed — try right-clicking and copying manually', 'error')
+  })
+}
+
+function buildEmailHTML(v, subject) {
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"/><title>${subject || 'Newsletter'}</title></head>
+<body style="margin:0;padding:0;background:#f4f4f5;font-family:Georgia,serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 0;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:8px;overflow:hidden;">
+  <tr><td style="background:#0f172a;padding:28px 40px;">
+    <p style="margin:0;color:#94a3b8;font-size:11px;letter-spacing:2px;font-family:Arial,sans-serif;">NETA VIRTUAL TEAM — INDUSTRY BRIEFING</p>
+    <p style="margin:8px 0 0;color:#f8fafc;font-size:20px;font-weight:bold;font-family:Arial,sans-serif;">${subject || ''}</p>
+  </td></tr>
+  <tr><td style="padding:32px 40px 0;border-left:4px solid #1a56db;">
+    <p style="margin:0;color:#1e293b;font-size:16px;line-height:1.6;font-style:italic;">${v.hook || ''}</p>
+  </td></tr>
+  <tr><td style="padding:24px 40px 0;">
+    <p style="margin:0;color:#334155;font-size:15px;line-height:1.8;">${(v.insight || '').replace(/\n/g,'<br/><br/>')}</p>
+  </td></tr>
+  <tr><td style="padding:24px 40px;">
+    <table width="100%" cellpadding="16" cellspacing="0" style="background:#f0f9ff;border-radius:6px;border:1px solid #bae6fd;">
+      <tr><td><p style="margin:0;color:#0369a1;font-size:14px;font-family:Arial,sans-serif;">${v.mid_cta || ''}</p></td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="padding:0 40px 24px;">
+    <p style="margin:0 0 12px;color:#0f172a;font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;font-family:Arial,sans-serif;">KEY TAKEAWAYS</p>
+    <ul style="margin:0;padding-left:20px;color:#334155;font-size:14px;line-height:1.8;">
+      ${(v.takeaways || []).map(t => `<li style="margin-bottom:8px;">${t}</li>`).join('')}
+    </ul>
+  </td></tr>
+  <tr><td style="padding:0 40px 32px;">
+    <p style="margin:0;color:#334155;font-size:15px;line-height:1.8;">${v.closing || ''}</p>
+  </td></tr>
+  <tr><td style="background:#0f172a;padding:28px 40px;">
+    <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;font-family:Arial,sans-serif;">From Neta Virtual Team</p>
+    <p style="margin:0;color:#f8fafc;font-size:14px;line-height:1.7;font-family:Arial,sans-serif;">${v.end_cta || ''}</p>
+  </td></tr>
+  <tr><td style="padding:20px 40px;text-align:center;">
+    <p style="margin:0;color:#94a3b8;font-size:11px;font-family:Arial,sans-serif;">Neta Virtual Team · netavirtualteam.com.au</p>
+  </td></tr>
+</table>
+</td></tr>
+</table>
+</body></html>`
+}
+
+// ── Render Campaigns List ──────────────────────────────────────────
+function renderCampaigns() {
+  const container = document.getElementById('campaigns-list')
+  if (!campaigns.length) {
+    container.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:#475569;font-size:13px;">No campaigns yet. Go to Generate to create your first one.</div>`
+    return
+  }
+  container.innerHTML = campaigns.map(c => {
+    const statusColor = {pending_qa:'#f59e0b',approved:'#3b82f6',sent:'#10b981'}[c.status]||'#64748b'
+    return `<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:start;justify-content:space-between;gap:16px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:${statusColor}22;color:${statusColor};">${c.status.replace('_',' ').toUpperCase()}</span>
+            <span style="font-size:12px;color:#475569;">${new Date(c.createdAt).toLocaleDateString('en-AU')}</span>
+          </div>
+          <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin-bottom:4px;">${c.title}</h3>
+          <p style="font-size:12px;color:#475569;">A: "${c.variantA?.subject_line || ''}"</p>
+          <p style="font-size:12px;color:#475569;">B: "${c.variantB?.subject_line || ''}"</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;">
+          <button class="btn btn-secondary" style="font-size:12px;" onclick="viewCampaign(${c.id})">👁 Review</button>
+          ${c.status==='pending_qa'?`<button class="btn btn-primary" style="font-size:12px;" onclick="approveCampaign(${c.id})">✓ Approve</button>`:''}
+          <button class="btn btn-secondary" style="font-size:12px;" onclick="copyEmailHTML(${c.id})">📋 Copy HTML</button>
+          <button class="btn btn-danger" style="font-size:12px;" onclick="deleteCampaign(${c.id})">🗑</button>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function viewCampaign(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  showPage('generate')
+  const result = document.getElementById('gen-result')
+  result.style.display = 'block'
+  result.innerHTML = renderQAPanel(c)
+  window.scrollTo(0, 0)
+}
+
+// ── Subscribers ───────────────────────────────────────────────────
+function addSubscriber() {
+  const email = document.getElementById('sub-email').value.trim()
+  if (!email) return toast('Email is required', 'error')
+  if (subscribers.find(s => s.email === email)) return toast('Already subscribed', 'error')
+  subscribers.push({
+    email,
+    first_name: document.getElementById('sub-firstname').value.trim(),
+    last_name: document.getElementById('sub-lastname').value.trim(),
+    company: document.getElementById('sub-company').value.trim(),
+    addedAt: new Date().toISOString(),
+    source: 'manual'
+  })
+  save()
+  document.getElementById('sub-email').value = ''
+  document.getElementById('sub-firstname').value = ''
+  document.getElementById('sub-lastname').value = ''
+  document.getElementById('sub-company').value = ''
+  document.getElementById('add-sub-form').style.display = 'none'
+  renderSubscribers()
+  toast('Subscriber added')
+}
+
+function importCSV(input) {
+  const file = input.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim())
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g,''))
+    let created = 0, skipped = 0
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim().replace(/['"]/g,''))
+      const row = {}
+      headers.forEach((h, idx) => row[h] = cols[idx] || '')
+      const email = row.email || row['e-mail'] || ''
+      if (!email) continue
+      if (subscribers.find(s => s.email === email)) { skipped++; continue }
+      subscribers.push({
+        email,
+        first_name: row.first_name || row.firstname || '',
+        last_name: row.last_name || row.lastname || '',
+        company: row.company || '',
+        addedAt: new Date().toISOString(),
+        source: 'csv'
+      })
+      created++
+    }
+    save()
+    renderSubscribers()
+    toast(`Imported: ${created} added, ${skipped} skipped`)
+  }
+  reader.readAsText(file)
+}
+
+function exportSubscribers() {
+  const csv = ['email,first_name,last_name,company,source,added_at',
+    ...subscribers.map(s => `${s.email},${s.first_name||''},${s.last_name||''},${s.company||''},${s.source},${s.addedAt}`)
+  ].join('\n')
+  const a = document.createElement('a')
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+  a.download = 'subscribers.csv'
+  a.click()
+}
+
+function removeSubscriber(email) {
+  subscribers = subscribers.filter(s => s.email !== email)
+  save()
+  renderSubscribers()
+  toast('Subscriber removed')
+}
+
+function renderSubscribers() {
+  document.getElementById('sub-count').textContent = subscribers.length
+  const table = document.getElementById('sub-table')
+  if (!subscribers.length) {
+    table.innerHTML = '<p style="color:#475569;font-size:13px;text-align:center;padding:24px 0;">No subscribers yet.</p>'
+    return
+  }
+  table.innerHTML = `
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <thead><tr style="border-bottom:1px solid #1f2937;color:#475569;font-size:12px;">
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Email</th>
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Name</th>
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Company</th>
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Source</th>
+        <th style="padding-bottom:8px;"></th>
+      </tr></thead>
+      <tbody style="divide-y:1px solid #1f2937;">
+        ${subscribers.map(s => `
+          <tr style="border-bottom:1px solid #111827;">
+            <td style="padding:10px 0;color:#e2e8f0;">${s.email}</td>
+            <td style="padding:10px 8px;color:#64748b;">${[s.first_name,s.last_name].filter(Boolean).join(' ')||'—'}</td>
+            <td style="padding:10px 8px;color:#64748b;">${s.company||'—'}</td>
+            <td style="padding:10px 8px;"><span style="font-size:11px;background:#1f2937;color:#64748b;padding:2px 8px;border-radius:999px;">${s.source}</span></td>
+            <td style="padding:10px 0;text-align:right;"><button onclick="removeSubscriber('${s.email}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:14px;" title="Remove">✕</button></td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`
+}
+
+// ── Dashboard ─────────────────────────────────────────────────────
+function refreshDashboard() {
+  document.getElementById('stat-campaigns').textContent = campaigns.length
+  document.getElementById('stat-subscribers').textContent = subscribers.length
+  document.getElementById('stat-approved').textContent = campaigns.filter(c => c.status === 'approved' || c.status === 'sent').length
+
+  const recent = campaigns.slice(0, 5)
+  const el = document.getElementById('dashboard-campaigns')
+  if (!recent.length) {
+    el.innerHTML = '<p style="color:#475569;font-size:13px;text-align:center;padding:24px 0;">No campaigns yet. Go to Generate to create your first one.</p>'
+    return
+  }
+  el.innerHTML = `<table style="width:100%;font-size:13px;">
+    <thead><tr style="border-bottom:1px solid #1f2937;color:#475569;font-size:12px;">
+      <th style="text-align:left;padding-bottom:8px;font-weight:500;">Campaign</th>
+      <th style="text-align:left;padding-bottom:8px;font-weight:500;">Status</th>
+      <th style="text-align:left;padding-bottom:8px;font-weight:500;">Created</th>
+    </tr></thead>
+    <tbody>${recent.map(c => {
+      const sc = {pending_qa:'#f59e0b',approved:'#3b82f6',sent:'#10b981'}[c.status]||'#64748b'
+      return `<tr style="border-bottom:1px solid #111827;cursor:pointer;" onclick="viewCampaign(${c.id})">
+        <td style="padding:10px 0;color:#e2e8f0;">${c.title}</td>
+        <td style="padding:10px 8px;"><span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${sc}22;color:${sc};">${c.status.replace('_',' ')}</span></td>
+        <td style="padding:10px 0;color:#475569;">${new Date(c.createdAt).toLocaleDateString('en-AU')}</td>
+      </tr>`
+    }).join('')}</tbody>
+  </table>`
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+refreshDashboard()
+loadSettings()
+</script>
+</body>
+</html>
+`
