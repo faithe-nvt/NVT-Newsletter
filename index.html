@@ -1798,9 +1798,19 @@ function previewCustomTemplate() {
   modal.scrollIntoView({ behavior: 'smooth' })
 }
 
+function minifyHTML(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/>\s+</g, '><')
+    .replace(/\s+>/g, '>')
+    .replace(/<\s+/g, '<')
+    .trim()
+}
+
 async function sendCustomTemplate() {
   const subject = document.getElementById('custom-tpl-subject').value.trim()
-  const html = document.getElementById('custom-tpl-html').value.trim()
+  const html = minifyHTML(document.getElementById('custom-tpl-html').value.trim())
   if (!subject) { toast('Add a subject line first', 'error'); return }
   if (!html) { toast('Paste your HTML first', 'error'); return }
 
@@ -1898,7 +1908,7 @@ async function sendTemplate(key) {
         to_email: sub.email,
         to_name: [sub.first_name, sub.last_name].filter(Boolean).join(' ') || sub.email,
         subject: tpl.subject,
-        html_content: tpl.html,
+        html_content: minifyHTML(tpl.html),
         from_name: settings.fromName || 'Neta Virtual Team',
       })
       sent++
