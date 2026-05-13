@@ -1,0 +1,1614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neta Newsletter Bot</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  body { background: #0a0f1a; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin:0; }
+  .card { background: #111827; border: 1px solid #1f2937; border-radius: 12px; padding: 24px; }
+  .input { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 8px 12px; color: #f1f5f9; width: 100%; font-size: 14px; outline: none; box-sizing: border-box; }
+  .input:focus { border-color: #3b82f6; }
+  textarea.input { resize: vertical; line-height: 1.6; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+  .btn-primary { background: #2563eb; color: white; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: #1f2937; color: #cbd5e1; }
+  .btn-secondary:hover { background: #374151; }
+  .btn-danger { background: rgba(127,29,29,0.4); color: #f87171; }
+  .btn-danger:hover { background: rgba(127,29,29,0.6); }
+  .btn-green { background: #065f46; color: #6ee7b7; }
+  .btn-green:hover { background: #064e3b; }
+  .tab { padding: 6px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; color: #94a3b8; }
+  .tab.active { background: #2563eb; color: white; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; font-size: 14px; color: #64748b; cursor: pointer; transition: all 0.15s; }
+  .sidebar-link:hover { color: #cbd5e1; background: #1f2937; }
+  .sidebar-link.active { color: #60a5fa; background: rgba(37,99,235,0.15); font-weight: 500; }
+  .toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; animation: slideIn 0.2s ease; max-width: 360px; }
+  .toast.success { background: #064e3b; color: #6ee7b7; border: 1px solid #065f46; }
+  .toast.error { background: #450a0a; color: #fca5a5; border: 1px solid #7f1d1d; }
+  .toast.info { background: #1e3a5f; color: #93c5fd; border: 1px solid #1d4ed8; }
+  @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .progress-bar { height: 6px; background: #1f2937; border-radius: 999px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #2563eb; border-radius: 999px; transition: width 0.3s ease; }
+  .editable-field { background: #1f2937; border: 1px solid #374151; border-radius: 8px; padding: 10px 12px; color: #f1f5f9; font-size: 13px; line-height: 1.7; width: 100%; box-sizing: border-box; outline: none; }
+  .editable-field:focus { border-color: #3b82f6; }
+</style>
+</head>
+<body>
+
+<div style="display:flex;min-height:100vh;">
+  <!-- Sidebar -->
+  <aside style="width:220px;min-height:100vh;background:#0d1117;border-right:1px solid #1f2937;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;">
+    <div style="padding:20px 16px;border-bottom:1px solid #1f2937;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">📬</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;color:#f1f5f9;">Neta Newsletter</div>
+          <div style="font-size:11px;color:#475569;">AU Accounting Focus</div>
+        </div>
+      </div>
+    </div>
+    <nav style="flex:1;padding:12px 8px;display:flex;flex-direction:column;gap:2px;">
+      <div class="sidebar-link active" onclick="showPage('dashboard')" id="nav-dashboard">📊 Dashboard</div>
+      <div class="sidebar-link" onclick="showPage('generate')" id="nav-generate">✨ Generate</div>
+      <div class="sidebar-link" onclick="showPage('campaigns')" id="nav-campaigns">📋 Campaigns</div>
+      <div class="sidebar-link" onclick="showPage('subscribers')" id="nav-subscribers">👥 Subscribers</div>
+      <div class="sidebar-link" onclick="showPage('settings')" id="nav-settings">⚙️ Settings</div>
+    </nav>
+    <div style="padding:12px 16px;border-bottom:1px solid #1f2937;">
+      <div style="font-size:11px;color:#334155;">netavirtualteam.com.au</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main style="flex:1;overflow:auto;">
+
+    <!-- DASHBOARD -->
+    <div id="page-dashboard" style="padding:32px;display:flex;flex-direction:column;gap:24px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;margin:0;">Dashboard</h1>
+        <p style="font-size:13px;color:#475569;margin:4px 0 0;">AU Accounting & Finance Newsletter</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="card" style="text-align:center;">
+          <div id="stat-campaigns" style="font-size:28px;font-weight:700;color:#f1f5f9;">0</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">Campaigns Generated</div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div id="stat-subscribers" style="font-size:28px;font-weight:700;color:#f1f5f9;">0</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">Subscribers</div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div id="stat-sent" style="font-size:28px;font-weight:700;color:#f1f5f9;">0</div>
+          <div style="font-size:13px;color:#64748b;margin-top:4px;">Emails Sent</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin:0 0 16px;">Writing Style — AU Accountants & CFOs</h2>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div style="background:#1f2937;border-radius:8px;padding:16px;">
+            <div style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:8px;">Tone</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.6;">Analytical, data-first, ROI-focused. No fluff. Short paragraphs. Australian English.</div>
+          </div>
+          <div style="background:#1f2937;border-radius:8px;padding:16px;">
+            <div style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:8px;">Structure</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.6;">Hook → insight → mid CTA → takeaways → closing → soft sell. Content sandwich.</div>
+          </div>
+          <div style="background:#1f2937;border-radius:8px;padding:16px;">
+            <div style="color:#60a5fa;font-weight:600;font-size:13px;margin-bottom:8px;">What Works</div>
+            <div style="color:#94a3b8;font-size:13px;line-height:1.6;">ATO updates, cash flow pressure, headcount costs, compliance friction, time-to-value.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin:0 0 12px;">Recent Campaigns</h2>
+        <div id="dashboard-campaigns" style="color:#475569;font-size:13px;text-align:center;padding:24px 0;">No campaigns yet.</div>
+      </div>
+    </div>
+
+    <!-- GENERATE -->
+    <div id="page-generate" style="padding:32px;display:none;flex-direction:column;gap:24px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;margin:0;">Generate Campaign</h1>
+        <p style="font-size:13px;color:#475569;margin:4px 0 0;">AI writes A/B newsletter variants — you edit, approve, and send</p>
+      </div>
+
+      <div class="card" style="display:flex;flex-direction:column;gap:16px;">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin:0;">Campaign Brief</h2>
+
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Topic Focus <span style="color:#334155;">(optional — leave blank for auto)</span></label>
+          <input class="input" id="gen-topic" placeholder="e.g. ATO end of financial year, cash flow tips, hiring bottlenecks…" />
+        </div>
+
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">✏️ Custom Instructions <span style="color:#334155;">(tell the AI exactly what you want)</span></label>
+          <textarea class="input" id="gen-instructions" rows="4" placeholder="e.g. Make it focus on small accounting firms with 1-5 staff. Mention the EOFY deadline pressure. Keep takeaways very practical — no theory. Use a slightly warmer tone than usual. End with the calculator CTA specifically."></textarea>
+          <p style="font-size:11px;color:#334155;margin-top:4px;">Be as specific as you want — the more detail, the better the output.</p>
+        </div>
+
+        <div style="display:flex;gap:12px;align-items:center;">
+          <button class="btn btn-primary" onclick="generateCampaign()" id="gen-btn" style="display:flex;align-items:center;gap:8px;">
+            ✨ Generate A/B Campaign
+          </button>
+          <span style="font-size:12px;color:#475569;">Takes 20–40 seconds</span>
+        </div>
+      </div>
+
+      <div id="gen-loading" style="display:none;" class="card">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="spinner"></div>
+          <div>
+            <div style="font-size:14px;font-weight:500;color:#60a5fa;" id="gen-loading-text">Analysing AU accounting news…</div>
+            <div style="font-size:12px;color:#475569;margin-top:2px;">Writing both A/B variants + QA rationale…</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="gen-result" style="display:none;"></div>
+    </div>
+
+    <!-- CAMPAIGNS -->
+    <div id="page-campaigns" style="padding:32px;display:none;flex-direction:column;gap:24px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;margin:0;">Campaigns</h1>
+        <p style="font-size:13px;color:#475569;margin:4px 0 0;">Review, edit, approve, and send your newsletters</p>
+      </div>
+      <div id="campaigns-list"></div>
+    </div>
+
+    <!-- SUBSCRIBERS -->
+    <div id="page-subscribers" style="padding:32px;display:none;flex-direction:column;gap:24px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;margin:0;">Subscribers</h1>
+          <p style="font-size:13px;color:#475569;margin:4px 0 0;">Manage your newsletter list</p>
+        </div>
+        <button class="btn btn-primary" onclick="toggleForm('add-sub-form')">+ Add Subscriber</button>
+      </div>
+
+      <div id="add-sub-form" style="display:none;" class="card">
+        <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin:0 0 12px;">Add Subscriber</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <input class="input" id="sub-email" placeholder="Email *" />
+          <input class="input" id="sub-company" placeholder="Company" />
+          <input class="input" id="sub-firstname" placeholder="First Name" />
+          <input class="input" id="sub-lastname" placeholder="Last Name" />
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary" onclick="addSubscriber()">Add</button>
+          <button class="btn btn-secondary" onclick="toggleForm('add-sub-form')">Cancel</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin:0 0 8px;">📂 Import CSV</h3>
+        <p style="font-size:12px;color:#475569;margin:0 0 12px;">Must have an <code style="background:#1f2937;padding:1px 6px;border-radius:4px;">email</code> column. Optional: first_name, last_name, company</p>
+        <input type="file" accept=".csv" onchange="importCSV(this)" style="font-size:13px;color:#94a3b8;" />
+      </div>
+
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin:0;">List (<span id="sub-count">0</span> subscribers)</h3>
+          <button class="btn btn-secondary" onclick="exportSubscribers()" style="font-size:12px;padding:4px 12px;">Export CSV</button>
+        </div>
+        <div id="sub-table"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="page-settings" style="padding:32px;display:none;flex-direction:column;gap:24px;">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#f1f5f9;margin:0;">Settings</h1>
+        <p style="font-size:13px;color:#475569;margin:4px 0 0;">API keys and email configuration</p>
+      </div>
+
+      <div class="card" style="max-width:640px;display:flex;flex-direction:column;gap:16px;">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin:0;padding-bottom:12px;border-bottom:1px solid #1f2937;">🤖 AI — GPT-4o-mini via GitHub (free)</h2>
+        <div>
+          <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">GitHub Token (for GPT-4o-mini — free)</label>
+          <input class="input" id="settings-gh-key" type="password" placeholder="ghp_..." />
+          <p style="font-size:11px;color:#334155;margin-top:6px;">github.com → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate new token (no scopes needed).</p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width:640px;display:flex;flex-direction:column;gap:16px;">
+        <h2 style="font-size:15px;font-weight:600;color:#e2e8f0;margin:0;padding-bottom:12px;border-bottom:1px solid #1f2937;">📧 Email Sending — EmailJS (free, 200/month)</h2>
+
+        <div style="background:#1f2937;border-radius:8px;padding:16px;font-size:13px;color:#64748b;line-height:1.9;">
+          <p style="margin:0 0 10px;font-weight:600;color:#e2e8f0;">Setup steps:</p>
+          <ol style="margin:0;padding-left:18px;">
+            <li>Go to <strong style="color:#60a5fa;">emailjs.com</strong> and sign up free</li>
+            <li>Go to <strong>Email Services</strong> → Add Service → choose Gmail → connect your Gmail account → copy the <strong>Service ID</strong></li>
+            <li>Go to <strong>Email Templates</strong> → Create Template → set the body to just: <code style="background:#0d1117;padding:1px 6px;border-radius:4px;color:#60a5fa;">{{{html_content}}}</code> and subject to <code style="background:#0d1117;padding:1px 6px;border-radius:4px;color:#60a5fa;">{{subject}}</code> → Save → copy the <strong>Template ID</strong></li>
+            <li>Go to <strong>Account</strong> → copy your <strong>Public Key</strong></li>
+          </ol>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">EmailJS Public Key</label>
+            <input class="input" id="settings-brevo-key" placeholder="e.g. abc123XYZ..." />
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Service ID</label>
+            <input class="input" id="settings-ejs-service" placeholder="e.g. service_xxxxxx" />
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">Template ID</label>
+            <input class="input" id="settings-ejs-template" placeholder="e.g. template_xxxxxx" />
+          </div>
+          <div>
+            <label style="font-size:12px;color:#64748b;display:block;margin-bottom:6px;">From Name</label>
+            <input class="input" id="settings-from-name" placeholder="Neta Virtual Team" />
+          </div>
+        </div>
+        <p style="font-size:11px;color:#334155;margin:0;">Emails send from whichever Gmail account you connected in EmailJS.</p>
+      </div>
+
+      <div style="max-width:640px;">
+        <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────
+let campaigns = JSON.parse(localStorage.getItem('neta_campaigns') || '[]')
+let subscribers = JSON.parse(localStorage.getItem('neta_subscribers') || '[]')
+let settings = JSON.parse(localStorage.getItem('neta_settings') || '{}')
+
+function save() {
+  localStorage.setItem('neta_campaigns', JSON.stringify(campaigns))
+  localStorage.setItem('neta_subscribers', JSON.stringify(subscribers))
+  localStorage.setItem('neta_settings', JSON.stringify(settings))
+}
+
+// ── Navigation ─────────────────────────────────────────────────────
+function showPage(page) {
+  ['dashboard','generate','campaigns','subscribers','settings'].forEach(p => {
+    const el = document.getElementById('page-' + p)
+    el.style.display = p === page ? 'flex' : 'none'
+    if (p === page) el.style.flexDirection = 'column'
+    document.getElementById('nav-' + p).classList.toggle('active', p === page)
+  })
+  if (page === 'dashboard') refreshDashboard()
+  if (page === 'campaigns') renderCampaigns()
+  if (page === 'subscribers') renderSubscribers()
+  if (page === 'settings') loadSettings()
+}
+
+function toggleForm(id) {
+  const el = document.getElementById(id)
+  el.style.display = el.style.display === 'none' ? 'block' : 'none'
+}
+
+// ── Toast ──────────────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.createElement('div')
+  el.className = 'toast ' + type
+  el.textContent = msg
+  document.body.appendChild(el)
+  setTimeout(() => el.remove(), 4000)
+}
+
+// ── Settings ───────────────────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('settings-gh-key').value = settings.ghKey ? '●●●●●●●●●●●' : ''
+  document.getElementById('settings-brevo-key').value = settings.ejsPublicKey || ''
+  document.getElementById('settings-ejs-service').value = settings.ejsServiceId || ''
+  document.getElementById('settings-ejs-template').value = settings.ejsTemplateId || ''
+  document.getElementById('settings-from-name').value = settings.fromName || 'Neta Virtual Team'
+}
+
+function saveSettings() {
+  const gh = document.getElementById('settings-gh-key').value.trim()
+  if (gh && !gh.startsWith('●')) settings.ghKey = gh
+  const pub = document.getElementById('settings-brevo-key').value.trim()
+  if (pub) settings.ejsPublicKey = pub
+  const svc = document.getElementById('settings-ejs-service').value.trim()
+  if (svc) settings.ejsServiceId = svc
+  const tpl = document.getElementById('settings-ejs-template').value.trim()
+  if (tpl) settings.ejsTemplateId = tpl
+  settings.fromName = document.getElementById('settings-from-name').value.trim() || 'Neta Virtual Team'
+  save()
+  if (settings.ejsPublicKey) emailjs.init(settings.ejsPublicKey)
+  toast('Settings saved')
+}
+
+// ── AI prompt builder ──────────────────────────────────────────────
+const AU_DATA = `
+VERIFIED AU INDUSTRY DATA (cite these specifically):
+- CA ANZ 2025: taxation accountant vacancy fill rate 59% nationally
+- Australia faces approximately 6,000 accountant shortfall by 2030; demand forecast 28,000 by 2029
+- ABS: Australia needs 338,362 accountants by 2026 -- approximately 10,000 extra per year
+- Average vacancy fill time: 4-5 weeks; smaller firms hit hardest
+- 42% of firms report significant retention issues; burnout is the leading cause
+- CPA Australia, CA ANZ and IPA all warning the graduate pipeline is shrinking further
+- ATO tightening debt enforcement and compliance scrutiny in 2025
+- Real news sources to draw from: Accountants Daily, CA ANZ, CPA Australia, ABS, ATO announcements, IBISWorld
+`
+
+function buildPrompt(topic, customInstructions) {
+  const topicLine = topic
+    ? `NEWS HOOK / TOPIC: ${topic}`
+    : 'Find the most pressing current issue facing Australian accounting firm principals and build from the freshest angle.'
+  const instructionsLine = customInstructions
+    ? `\nADDITIONAL INSTRUCTIONS:\n${customInstructions}\n`
+    : ''
+
+  return `You are a newsletter writer serving Australian accounting firm principals. Your job is to deliver genuine industry intelligence they cannot afford to miss -- sourced from real AU news outlets including Accountants Daily, CA ANZ, CPA Australia, ABS, ATO announcements and IBISWorld.
+
+The newsletter exists entirely to serve the accountant. Any solution or service mentioned is a quiet, natural footnote -- never the centre. The reader should finish each edition feeling informed and respected, not sold to.
+
+Write in Australian English. No em dashes. No emojis. Direct, news-led, confident.
+
+${AU_DATA}
+
+${topicLine}
+${instructionsLine}
+
+RULES:
+- Never lead with a product or service
+- Never use the phrase "virtual assistant"
+- Never mention any brand by name in the body copy
+- The only acceptable CTA is framed as a conversation or resource: link to netavirtualteam.com.au
+- Sign off as "Neta Virtual Team" only, no personal name
+- Cite real data sources inline (e.g. "according to CA ANZ", "ABS projects", "CPA Australia research shows")
+
+PRODUCE TWO VERSIONS:
+
+VERSION A -- Fear/Loss framing:
+What is already slipping, what the data says, what the structural risk looks like if nothing changes.
+Tone: measured urgency, data-led, the kind of memo a peer would send before it becomes a crisis.
+
+VERSION B -- Identity/Pride framing:
+Who the best firms are becoming, what the smart principals have figured out, the model that is quietly compounding.
+Tone: aspirational but grounded, peer recognition, the reader sees themselves in the best-practice picture.
+
+STRUCTURE FOR BOTH VERSIONS (follow exactly):
+1. subject_line -- leads with the real news, creates urgency or curiosity, no product mention
+2. preview_text -- a specific number or provocation that earns the open (one sentence)
+3. hook -- 2-3 lines, cite the real data source and stat, no preamble
+4. signal -- 180-250 words, build from the news into the structural problem, arrive naturally and briefly at a structural solution -- no brand names, no sales language
+5. lever_pulls -- 4-5 bullets, majority sourced data, one or two practical proof points
+6. the_move -- one low-friction CTA, framed as a conversation or resource, linking to netavirtualteam.com.au
+7. closer -- 1-2 lines, philosophical or punchy only. Do NOT include any name, signature, or sign-off. No "Faith", no "Neta Virtual Team", no dashes before a name. Just the closing thought, nothing else.
+
+STRICT LANGUAGE RULES:
+- No em dashes anywhere. Not in any form. Use commas, colons, or full stops instead.
+- No exclamation marks.
+- No emojis.
+- Australian English throughout.
+- Never use the phrase "virtual assistant".
+- Never mention any brand by name in the body copy.
+
+Return ONLY valid JSON, no markdown fences:
+{
+  "variantA": {
+    "subject_line": "...",
+    "preview_text": "a specific number or provocation, one sentence",
+    "hook": "2-3 lines citing real data source and stat, no preamble",
+    "stats": [
+      {"num": "...", "desc": "short label with source"},
+      {"num": "...", "desc": "short label with source"},
+      {"num": "...", "desc": "short label with source"}
+    ],
+    "signal": "180-250 words, two paragraphs, no em dashes",
+    "lever_pulls": ["...","...","...","...","..."],
+    "the_move": "one sentence framing the CTA as a conversation or resource",
+    "closer": "1-2 lines, philosophical or punchy, no em dash",
+    "angle": "Fear/Loss -- [brief descriptor]"
+  },
+  "variantB": {
+    "subject_line": "...",
+    "preview_text": "a specific number or provocation, one sentence",
+    "hook": "2-3 lines citing real data source and stat, no preamble",
+    "stats": [
+      {"num": "...", "desc": "short label with source"},
+      {"num": "...", "desc": "short label with source"},
+      {"num": "...", "desc": "short label with source"}
+    ],
+    "signal": "180-250 words, two paragraphs, no em dashes",
+    "lever_pulls": ["...","...","...","...","..."],
+    "the_move": "one sentence framing the CTA as a conversation or resource",
+    "closer": "1-2 lines, philosophical or punchy, no em dash",
+    "angle": "Identity/Pride -- [brief descriptor]"
+  },
+  "rationale": "3-4 sentences on why this topic is timely, what the A/B test is designed to learn about this audience, and what a strong result looks like for positioning.",
+  "style_note": "2 sentences on why this framing works specifically for accounting firm principals.",
+  "sources": [{"title":"...","source":"Accountants Daily / CA ANZ / CPA Australia / ABS / ATO / IBISWorld"}]
+}`
+}
+
+// ── Generate ───────────────────────────────────────────────────────
+async function generateCampaign() {
+  const key = settings.ghKey
+  if (!key) { toast('Add your GitHub token in Settings first', 'error'); showPage('settings'); return }
+
+  const topic = document.getElementById('gen-topic').value.trim()
+  const instructions = document.getElementById('gen-instructions').value.trim()
+  const btn = document.getElementById('gen-btn')
+  const loading = document.getElementById('gen-loading')
+  const result = document.getElementById('gen-result')
+
+  btn.disabled = true
+  loading.style.display = 'flex'
+  result.style.display = 'none'
+
+  const steps = ['Analysing AU accounting news…','Selecting best angle…','Writing Variant A (analytical)…','Writing Variant B (narrative)…','Generating QA rationale…']
+  let si = 0
+  const stepEl = document.getElementById('gen-loading-text')
+  const timer = setInterval(() => { si = (si+1) % steps.length; stepEl.textContent = steps[si] }, 5000)
+
+  try {
+    const prompt = buildPrompt(topic, instructions)
+    const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are an expert B2B newsletter writer. Output valid JSON only, no markdown fences.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.8, max_tokens: 3000
+      })
+    })
+    clearInterval(timer)
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'API error') }
+    const data = await res.json()
+    const text = data.choices?.[0]?.message?.content || ''
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('Could not parse AI response — try again')
+    const parsed = JSON.parse(match[0])
+
+    const campaign = {
+      id: Date.now(),
+      title: parsed.variantA?.subject_line || 'Newsletter Campaign',
+      status: 'pending_qa',
+      createdAt: new Date().toISOString(),
+      topic, instructions,
+      variantA: parsed.variantA,
+      variantB: parsed.variantB,
+      rationale: parsed.rationale,
+      style_note: parsed.style_note,
+      sources: parsed.sources || [],
+      sentCount: 0,
+    }
+
+    campaigns.unshift(campaign)
+    save()
+    loading.style.display = 'none'
+    btn.disabled = false
+    result.style.display = 'block'
+    result.innerHTML = renderQAPanel(campaign)
+    refreshDashboard()
+    toast('Campaign generated — review below')
+  } catch(e) {
+    clearInterval(timer)
+    loading.style.display = 'none'
+    btn.disabled = false
+    toast('Generation failed: ' + e.message, 'error')
+  }
+}
+
+// ── Refine with AI ─────────────────────────────────────────────────
+async function refineCampaign(id) {
+  const feedback = document.getElementById(`refine-input-${id}`)?.value?.trim()
+  if (!feedback) { toast('Enter your feedback first', 'error'); return }
+  const key = settings.ghKey
+  if (!key) { toast('Add your GitHub token in Settings', 'error'); return }
+
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+
+  const btn = document.getElementById(`refine-btn-${id}`)
+  btn.disabled = true
+  btn.textContent = 'Refining…'
+
+  const prompt = buildPrompt(c.topic, `${c.instructions ? c.instructions + '\n\n' : ''}REFINEMENT FEEDBACK: ${feedback}\n\nPlease update both variants based on this feedback while keeping the overall structure.`)
+
+  try {
+    const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are an expert B2B newsletter writer. Output valid JSON only, no markdown fences.' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7, max_tokens: 3000
+      })
+    })
+    if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || 'API error') }
+    const data = await res.json()
+    const text = data.choices?.[0]?.message?.content || ''
+    const match = text.match(/\{[\s\S]*\}/)
+    if (!match) throw new Error('Could not parse response')
+    const parsed = JSON.parse(match[0])
+
+    c.variantA = parsed.variantA
+    c.variantB = parsed.variantB
+    c.rationale = parsed.rationale || c.rationale
+    c.instructions = (c.instructions ? c.instructions + '\n' : '') + 'Refined: ' + feedback
+    save()
+
+    const result = document.getElementById('gen-result')
+    if (result) { result.innerHTML = renderQAPanel(c) }
+    else { viewCampaign(id) }
+    toast('Campaign refined successfully')
+  } catch(e) {
+    btn.disabled = false
+    btn.textContent = '🔄 Refine'
+    toast('Refinement failed: ' + e.message, 'error')
+  }
+}
+
+// ── QA Panel ───────────────────────────────────────────────────────
+function renderQAPanel(campaign) {
+  const va = campaign.variantA || {}
+  const vb = campaign.variantB || {}
+  const sc = {pending_qa:'#f59e0b',approved:'#3b82f6',sent:'#10b981'}[campaign.status]||'#64748b'
+
+  return `
+  <div class="card" style="display:flex;flex-direction:column;gap:20px;">
+    <div style="display:flex;align-items:start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+          <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:${sc}22;color:${sc};">${campaign.status.replace('_',' ').toUpperCase()}</span>
+          <span style="font-size:12px;color:#475569;">${new Date(campaign.createdAt).toLocaleDateString('en-AU')}</span>
+        </div>
+        <h2 style="font-size:17px;font-weight:700;color:#f1f5f9;margin:0;">${campaign.title}</h2>
+        ${campaign.sentCount ? `<p style="font-size:12px;color:#10b981;margin:4px 0 0;">✓ Sent to ${campaign.sentCount} subscribers</p>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${campaign.status==='pending_qa' ? `<button class="btn btn-primary" onclick="approveCampaign(${campaign.id})">✓ Approve</button>` : ''}
+        ${campaign.status==='approved' ? `<button class="btn btn-green" onclick="openSendModal(${campaign.id})">📤 Send to Subscribers</button>` : ''}
+        <button class="btn btn-secondary" onclick="copyEmailHTML(${campaign.id},'a')" style="font-size:13px;">📋 Copy HTML (A)</button>
+        <button class="btn btn-secondary" onclick="copyEmailHTML(${campaign.id},'b')" style="font-size:13px;">📋 Copy HTML (B)</button>
+        <button class="btn btn-danger" onclick="deleteCampaign(${campaign.id})" style="font-size:13px;">🗑</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px;">
+      <!-- Left: QA Analysis -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">💡 Why This Works</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.7;margin:0;">${campaign.rationale||'—'}</p>
+        </div>
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">✍️ Angle & Style</div>
+          <div style="margin-bottom:8px;">
+            <div style="font-size:11px;color:#475569;margin-bottom:4px;">Variant A</div>
+            <span style="font-size:12px;background:rgba(37,99,235,0.2);color:#60a5fa;padding:2px 10px;border-radius:999px;">${va.angle||'—'}</span>
+          </div>
+          <div style="margin-bottom:8px;">
+            <div style="font-size:11px;color:#475569;margin-bottom:4px;">Variant B</div>
+            <span style="font-size:12px;background:rgba(37,99,235,0.2);color:#60a5fa;padding:2px 10px;border-radius:999px;">${vb.angle||'—'}</span>
+          </div>
+          <p style="font-size:12px;color:#64748b;line-height:1.6;margin:8px 0 0;">${campaign.style_note||'Analytical + data-first approach matches CFO decision-making patterns.'}</p>
+        </div>
+        ${campaign.sources?.length ? `
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">📎 Sources</div>
+          ${campaign.sources.map(s=>`<div style="margin-bottom:8px;"><div style="font-size:12px;color:#e2e8f0;font-weight:500;">${s.title}</div><div style="font-size:11px;color:#475569;">${s.source}</div></div>`).join('')}
+        </div>` : ''}
+
+        <!-- Send Sample -->
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">📤 Send Sample Email</div>
+          <p style="font-size:12px;color:#475569;margin:0 0 10px;">Send a preview to your boss or yourself before the full send.</p>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <select id="sample-variant-${campaign.id}" style="background:#0d1117;border:1px solid #374151;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:13px;flex:0 0 auto;">
+              <option value="a">Version A</option>
+              <option value="b">Version B</option>
+            </select>
+          </div>
+          <input id="sample-email-${campaign.id}" class="input" placeholder="boss@firm.com.au" style="margin-bottom:8px;" />
+          <button id="sample-btn-${campaign.id}" class="btn btn-green" style="width:100%;font-size:13px;"
+            onclick="sendSample(${campaign.id}, document.getElementById('sample-variant-${campaign.id}').value, document.getElementById('sample-email-${campaign.id}').value)">
+            Send Sample
+          </button>
+        </div>
+
+        <!-- Refine with AI -->
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:10px;">🔄 Refine with AI</div>
+          <textarea id="refine-input-${campaign.id}" class="input" rows="3" placeholder="e.g. Make the hook stronger, focus more on EOFY, shorten the takeaways, change the CTA to the calculator one…" style="margin-bottom:8px;font-size:13px;"></textarea>
+          <button id="refine-btn-${campaign.id}" class="btn btn-secondary" onclick="refineCampaign(${campaign.id})" style="font-size:13px;width:100%;">🔄 Refine Both Variants</button>
+        </div>
+
+        <!-- Fact Check Bot -->
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:6px;">✅ Fact Check Bot</div>
+          <p style="font-size:12px;color:#475569;margin:0 0 10px;">Scans every claim and flags what is verified, unverified, or needs a source.</p>
+          <button class="btn btn-secondary" onclick="runFactCheck(${campaign.id})" id="factcheck-btn-${campaign.id}" style="font-size:13px;width:100%;margin-bottom:10px;">Run Fact Check</button>
+          <div id="factcheck-result-${campaign.id}" style="display:none;"></div>
+        </div>
+
+        <!-- Founder Voice Bot -->
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:6px;">🎙️ Founder Voice Bot</div>
+          <p style="font-size:12px;color:#475569;margin:0 0 10px;">Rewrites the active variant in Faith's voice: direct, warm but no-nonsense, talks like a trusted peer not a brand.</p>
+          <select id="voice-variant-${campaign.id}" style="background:#0d1117;border:1px solid #374151;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:13px;width:100%;margin-bottom:8px;">
+            <option value="a">Version A</option>
+            <option value="b">Version B</option>
+          </select>
+          <button class="btn btn-secondary" onclick="runFounderVoice(${campaign.id})" id="voice-btn-${campaign.id}" style="font-size:13px;width:100%;margin-bottom:10px;">Apply Founder Voice</button>
+          <div id="voice-result-${campaign.id}" style="display:none;"></div>
+        </div>
+
+        <!-- Value Bot -->
+        <div style="background:#1f2937;border-radius:10px;padding:16px;">
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#475569;margin-bottom:6px;">💎 Value Bot</div>
+          <p style="font-size:12px;color:#475569;margin:0 0 10px;">Scores the newsletter on value density, specificity, and respect for the reader's time. Tells you exactly what to fix.</p>
+          <button class="btn btn-secondary" onclick="runValueBot(${campaign.id})" id="value-btn-${campaign.id}" style="font-size:13px;width:100%;margin-bottom:10px;">Score This Newsletter</button>
+          <div id="value-result-${campaign.id}" style="display:none;"></div>
+        </div>
+      </div>
+
+      <!-- Right: Preview with A/B tabs + inline editing -->
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div style="display:flex;gap:4px;background:#1f2937;border-radius:8px;padding:4px;">
+            <div class="tab active" id="tab-a-${campaign.id}" onclick="switchTab(${campaign.id},'a')">Version A -- Fear/Loss</div>
+            <div class="tab" id="tab-b-${campaign.id}" onclick="switchTab(${campaign.id},'b')">Version B -- Identity/Pride</div>
+          </div>
+          <button class="btn btn-secondary" onclick="toggleEdit(${campaign.id})" id="edit-btn-${campaign.id}" style="font-size:12px;padding:4px 12px;">✏️ Edit Content</button>
+        </div>
+
+        <div id="preview-a-${campaign.id}">${renderVariantPreview(va, va.subject_line, campaign.id, 'a')}</div>
+        <div id="preview-b-${campaign.id}" style="display:none;">${renderVariantPreview(vb, vb.subject_line, campaign.id, 'b')}</div>
+        <div id="edit-a-${campaign.id}" style="display:none;">${renderVariantEditor(va, campaign.id, 'a')}</div>
+        <div id="edit-b-${campaign.id}" style="display:none;">${renderVariantEditor(vb, campaign.id, 'b')}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Send Modal -->
+  <div id="send-modal-${campaign.id}" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:none;align-items:center;justify-content:center;">
+    <div class="card" style="width:480px;max-width:90vw;">
+      <h3 style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0 0 12px;">📤 Send Campaign</h3>
+      <p style="font-size:13px;color:#94a3b8;margin:0 0 16px;">This will send to <strong style="color:#f1f5f9;">${subscribers.filter(s=>s.active!==false).length} active subscribers</strong>. Half get Variant A, half get Variant B.</p>
+      <div id="send-progress-${campaign.id}" style="display:none;margin-bottom:16px;">
+        <div style="font-size:13px;color:#94a3b8;margin-bottom:8px;" id="send-status-${campaign.id}">Sending…</div>
+        <div class="progress-bar"><div class="progress-fill" id="send-bar-${campaign.id}" style="width:0%"></div></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-green" id="send-confirm-${campaign.id}" onclick="sendCampaign(${campaign.id})">Send Now</button>
+        <button class="btn btn-secondary" onclick="closeSendModal(${campaign.id})">Cancel</button>
+      </div>
+    </div>
+  </div>`
+}
+
+let editMode = {}
+function toggleEdit(id) {
+  editMode[id] = !editMode[id]
+  const on = editMode[id]
+  const btn = document.getElementById(`edit-btn-${id}`)
+  btn.textContent = on ? '💾 Save Edits' : '✏️ Edit Content'
+  if (on) {
+    btn.classList.add('btn-primary')
+    btn.classList.remove('btn-secondary')
+  } else {
+    saveEdits(id)
+    btn.classList.remove('btn-primary')
+    btn.classList.add('btn-secondary')
+  }
+  const currentTab = document.getElementById(`tab-a-${id}`).classList.contains('active') ? 'a' : 'b'
+  updateTabVisibility(id, currentTab, on)
+}
+
+function updateTabVisibility(id, variant, isEdit) {
+  document.getElementById(`preview-a-${id}`).style.display = !isEdit && variant==='a' ? '' : 'none'
+  document.getElementById(`preview-b-${id}`).style.display = !isEdit && variant==='b' ? '' : 'none'
+  document.getElementById(`edit-a-${id}`).style.display = isEdit && variant==='a' ? '' : 'none'
+  document.getElementById(`edit-b-${id}`).style.display = isEdit && variant==='b' ? '' : 'none'
+}
+
+function saveEdits(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  for (const v of ['a','b']) {
+    const variant = v === 'a' ? c.variantA : c.variantB
+    const fields = ['subject_line','hook','insight','mid_cta','closing','end_cta']
+    fields.forEach(f => {
+      const el = document.getElementById(`edit-${v}-${f}-${id}`)
+      if (el) variant[f] = el.value
+    })
+    const tkEls = document.querySelectorAll(`[id^="edit-${v}-tk-${id}-"]`)
+    variant.takeaways = Array.from(tkEls).map(el => el.value).filter(Boolean)
+  }
+  save()
+  // Refresh previews
+  document.getElementById(`preview-a-${id}`).innerHTML = renderVariantPreview(c.variantA, c.variantA.subject_line, id, 'a')
+  document.getElementById(`preview-b-${id}`).innerHTML = renderVariantPreview(c.variantB, c.variantB.subject_line, id, 'b')
+  toast('Edits saved')
+}
+
+function renderVariantPreview(v, subject, id, variant) {
+  if (!v) return '<p style="color:#475569;font-size:13px;">No data</p>'
+  return `
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div style="background:#1f2937;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Subject Line</div>
+        <div style="font-size:14px;font-weight:600;color:#f1f5f9;">${subject||v.subject_line||''}</div>
+      </div>
+      <div style="background:#1f2937;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Preview Text</div>
+        <div style="font-size:13px;color:#94a3b8;font-style:italic;">${v.preview_text||''}</div>
+      </div>
+      <div style="border-left:3px solid #2563eb;padding-left:14px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Hook</div>
+        <div style="font-size:13px;color:#e2e8f0;line-height:1.7;">${(v.hook||'').replace(/\n/g,'<br/>')}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Signal</div>
+        <div style="font-size:13px;color:#94a3b8;line-height:1.8;">${(v.signal||'').replace(/\n/g,'<br/>')}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#475569;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Lever Pulls</div>
+        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">
+          ${(v.lever_pulls||v.takeaways||[]).map(t=>`<li style="display:flex;align-items:start;gap:8px;font-size:13px;color:#94a3b8;"><span style="color:#2563eb;flex-shrink:0;margin-top:3px;">--</span>${t}</li>`).join('')}
+        </ul>
+      </div>
+      <div style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.15);border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#38bdf8;margin-bottom:4px;">The Move</div>
+        <div style="font-size:13px;color:#94a3b8;">${v.the_move||v.mid_cta||''}</div>
+      </div>
+      <div style="background:#1f2937;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;color:#475569;margin-bottom:4px;">Closer</div>
+        <div style="font-size:13px;color:#e2e8f0;font-style:italic;line-height:1.6;">${v.closer||v.closing||''}</div>
+      </div>
+    </div>`
+}
+
+function renderVariantEditor(v, id, variant) {
+  if (!v) return ''
+  const f = (label, field, rows=2) => `
+    <div>
+      <label style="font-size:11px;color:#475569;display:block;margin-bottom:4px;">${label}</label>
+      <textarea id="edit-${variant}-${field}-${id}" class="editable-field" rows="${rows}">${(v[field]||'').replace(/</g,'&lt;')}</textarea>
+    </div>`
+  return `
+    <div style="display:flex;flex-direction:column;gap:14px;background:#1f2937;border-radius:10px;padding:16px;">
+      <p style="font-size:12px;color:#475569;margin:0;">Edit any section -- click "Save Edits" when done.</p>
+      ${f('Subject Line','subject_line',1)}
+      ${f('Preview Text','preview_text',1)}
+      ${f('Hook','hook',3)}
+      ${f('Signal','signal',6)}
+      <div>
+        <label style="font-size:11px;color:#475569;display:block;margin-bottom:6px;">Lever Pulls (one per box)</label>
+        ${(v.lever_pulls||v.takeaways||[]).map((t,i)=>`<textarea id="edit-${variant}-tk-${id}-${i}" class="editable-field" rows="2" style="margin-bottom:6px;">${t.replace(/</g,'&lt;')}</textarea>`).join('')}
+      </div>
+      ${f('The Move (CTA)','the_move',2)}
+      ${f('Closer','closer',2)}
+    </div>`
+}
+
+function switchTab(id, variant) {
+  const isEdit = editMode[id]
+  document.getElementById(`preview-a-${id}`).style.display = !isEdit && variant==='a' ? '' : 'none'
+  document.getElementById(`preview-b-${id}`).style.display = !isEdit && variant==='b' ? '' : 'none'
+  document.getElementById(`edit-a-${id}`).style.display = isEdit && variant==='a' ? '' : 'none'
+  document.getElementById(`edit-b-${id}`).style.display = isEdit && variant==='b' ? '' : 'none'
+  document.getElementById(`tab-a-${id}`).className = 'tab' + (variant==='a' ? ' active' : '')
+  document.getElementById(`tab-b-${id}`).className = 'tab' + (variant==='b' ? ' active' : '')
+}
+
+// ── Email Sending via EmailJS ─────────────────────────────────────
+function openSendModal(id) {
+  const modal = document.getElementById(`send-modal-${id}`)
+  if (modal) { modal.style.display = 'flex' }
+}
+
+function closeSendModal(id) {
+  const modal = document.getElementById(`send-modal-${id}`)
+  if (modal) { modal.style.display = 'none' }
+}
+
+async function ejsSend(toEmail, toName, subject, htmlContent) {
+  const s = JSON.parse(localStorage.getItem('neta_settings') || '{}')
+  Object.assign(settings, s)
+  if (!settings.ejsPublicKey || !settings.ejsServiceId || !settings.ejsTemplateId) {
+    throw new Error('EmailJS not configured')
+  }
+  emailjs.init(settings.ejsPublicKey)
+  return emailjs.send(settings.ejsServiceId, settings.ejsTemplateId, {
+    to_email: toEmail,
+    to_name: toName || toEmail,
+    subject,
+    html_content: htmlContent,
+    from_name: settings.fromName || 'Neta Virtual Team',
+  })
+}
+
+async function sendSample(id, variantKey, toEmail) {
+  if (!toEmail) { toast('Enter an email address', 'error'); return }
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const btn = document.getElementById(`sample-btn-${id}`)
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...' }
+  try {
+    const vData = variantKey === 'a' ? c.variantA : c.variantB
+    const subject = `[SAMPLE] ${vData?.subject_line || c.title}`
+    await ejsSend(toEmail, toEmail, subject, buildEmailHTML(vData, subject))
+    toast(`Sample sent to ${toEmail}`)
+  } catch(e) {
+    console.error(e)
+    toast('Send failed -- check EmailJS credentials in Settings', 'error')
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Send Sample' }
+  }
+}
+
+async function sendCampaign(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+
+  const s = JSON.parse(localStorage.getItem('neta_settings') || '{}')
+  Object.assign(settings, s)
+
+  if (!settings.ejsPublicKey || !settings.ejsServiceId || !settings.ejsTemplateId) {
+    toast('Set up EmailJS in Settings first', 'error')
+    closeSendModal(id)
+    showPage('settings')
+    return
+  }
+
+  const activeSubscribers = subscribers.filter(s => s.active !== false)
+  if (!activeSubscribers.length) {
+    toast('No subscribers to send to', 'error')
+    closeSendModal(id)
+    return
+  }
+
+  const confirmBtn = document.getElementById(`send-confirm-${id}`)
+  const progressEl = document.getElementById(`send-progress-${id}`)
+  const statusEl = document.getElementById(`send-status-${id}`)
+  const barEl = document.getElementById(`send-bar-${id}`)
+
+  confirmBtn.disabled = true
+  confirmBtn.textContent = 'Sending...'
+  progressEl.style.display = 'block'
+
+  let sent = 0, failed = 0
+
+  for (let i = 0; i < activeSubscribers.length; i++) {
+    const sub = activeSubscribers[i]
+    const variant = i % 2 === 0 ? 'a' : 'b'
+    const vData = variant === 'a' ? c.variantA : c.variantB
+    const subject = vData?.subject_line || c.title
+    const html = buildEmailHTML(vData, subject, sub)
+    const name = [sub.first_name, sub.last_name].filter(Boolean).join(' ') || sub.email
+
+    statusEl.textContent = `Sending ${i+1} of ${activeSubscribers.length}...`
+    barEl.style.width = `${Math.round((i / activeSubscribers.length) * 100)}%`
+
+    try {
+      await ejsSend(sub.email, name, subject, html)
+      sent++
+    } catch(e) {
+      console.error('Send error:', e)
+      failed++
+    }
+
+    await new Promise(r => setTimeout(r, 300))
+  }
+
+  barEl.style.width = '100%'
+  statusEl.textContent = `Done -- ${sent} sent, ${failed} failed`
+
+  c.status = 'sent'
+  c.sentCount = (c.sentCount || 0) + sent
+  c.sentAt = new Date().toISOString()
+  save()
+
+  setTimeout(() => {
+    closeSendModal(id)
+    const result = document.getElementById('gen-result')
+    if (result && result.style.display !== 'none') result.innerHTML = renderQAPanel(c)
+    refreshDashboard()
+    renderCampaigns()
+    toast(`Done -- ${sent} sent${failed ? `, ${failed} failed` : ''}`, sent > 0 ? 'success' : 'error')
+  }, 1500)
+}
+
+// ── Bot helpers ────────────────────────────────────────────────────
+async function callAI(prompt) {
+  const key = settings.ghKey
+  if (!key) { toast('Add your GitHub token in Settings', 'error'); return null }
+  const res = await fetch('https://models.inference.ai.azure.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.4, max_tokens: 1500
+    })
+  })
+  if (!res.ok) throw new Error('API error')
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content || ''
+}
+
+function botLoading(btnId, msg) {
+  const btn = document.getElementById(btnId)
+  if (btn) { btn.disabled = true; btn.textContent = msg }
+}
+
+function botDone(btnId, label) {
+  const btn = document.getElementById(btnId)
+  if (btn) { btn.disabled = false; btn.textContent = label }
+}
+
+// ── Fact Check Bot ─────────────────────────────────────────────────
+async function runFactCheck(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  botLoading(`factcheck-btn-${id}`, 'Checking facts...')
+  const resultEl = document.getElementById(`factcheck-result-${id}`)
+
+  const content = [
+    c.variantA?.hook, c.variantA?.signal,
+    ...(c.variantA?.lever_pulls || []),
+    c.variantA?.closer
+  ].filter(Boolean).join('\n')
+
+  try {
+    const response = await callAI(`You are a fact-checker for an Australian accounting industry newsletter.
+
+Review the following newsletter content and check every factual claim, statistic, and data point.
+
+VERIFIED AU DATA YOU CAN CONFIRM:
+- CA ANZ 2025: taxation accountant vacancy fill rate 59% nationally
+- Australia faces approximately 6,000 accountant shortfall by 2030
+- Demand forecast 28,000 by 2029
+- ABS: Australia needs 338,362 accountants by 2026, approximately 10,000 extra per year
+- Average vacancy fill time: 4-5 weeks; smaller firms hit hardest
+- 42% of firms report significant retention issues; burnout is the leading cause
+- ATO tightening debt enforcement and compliance scrutiny in 2025
+- Super guarantee rate at 11.5%
+
+NEWSLETTER CONTENT TO CHECK:
+${content}
+
+For each claim you find, return a JSON array like this:
+[
+  { "claim": "exact quote of the claim", "status": "verified|unverified|needs_source|inaccurate", "note": "brief explanation" }
+]
+
+Status meanings:
+- verified: matches known AU data above
+- needs_source: plausible but no source cited
+- unverified: cannot confirm against known data
+- inaccurate: contradicts known data
+
+Return ONLY the JSON array, no markdown.`)
+
+    const parsed = JSON.parse(response.match(/\[[\s\S]*\]/)?.[0] || '[]')
+    const colors = { verified: '#10b981', needs_source: '#f59e0b', unverified: '#6366f1', inaccurate: '#ef4444' }
+    const icons = { verified: '✓', needs_source: '?', unverified: '~', inaccurate: '✗' }
+    const labels = { verified: 'Verified', needs_source: 'Needs source', unverified: 'Unverified', inaccurate: 'Inaccurate' }
+
+    window[`_factcheck_${id}`] = parsed
+    const hasIssues = parsed.some(p => p.status !== 'verified')
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = (parsed.length ? `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${parsed.map(item => `
+          <div style="background:#0d1117;border-radius:6px;padding:10px 12px;border-left:3px solid ${colors[item.status]||'#475569'};">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+              <span style="font-size:11px;font-weight:700;color:${colors[item.status]||'#475569'};">${icons[item.status]||'?'} ${labels[item.status]||item.status}</span>
+            </div>
+            <p style="font-size:12px;color:#94a3b8;margin:0 0 4px;font-style:italic;">"${item.claim}"</p>
+            <p style="font-size:11px;color:#475569;margin:0;">${item.note}</p>
+          </div>`).join('')}
+      </div>` : '<p style="font-size:12px;color:#475569;">No specific claims found to check.</p>') +
+      (hasIssues ? `<button class="btn btn-primary" style="font-size:12px;width:100%;margin-top:10px;" id="factfix-btn-${id}" onclick="applyFactCheckFixes(${id})">Fix Flagged Issues in Newsletter</button>` : `<p style="font-size:12px;color:#10b981;margin-top:8px;">All claims look good.</p>`)
+    botDone(`factcheck-btn-${id}`, 'Re-run Fact Check')
+  } catch(e) {
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = '<p style="font-size:12px;color:#ef4444;">Fact check failed. Check your API key.</p>'
+    botDone(`factcheck-btn-${id}`, 'Run Fact Check')
+  }
+}
+
+// ── Founder Voice Bot ──────────────────────────────────────────────
+async function runFounderVoice(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const variantKey = document.getElementById(`voice-variant-${id}`)?.value || 'a'
+  const v = variantKey === 'a' ? c.variantA : c.variantB
+  if (!v) return
+
+  botLoading(`voice-btn-${id}`, 'Applying voice...')
+  const resultEl = document.getElementById(`voice-result-${id}`)
+
+  try {
+    const response = await callAI(`You are a writing coach helping Faith, the founder of Neta Virtual Team, an AU offshore staffing company for accounting firms.
+
+FAITH'S VOICE PROFILE:
+- Talks like a trusted peer, not a brand or consultant
+- Direct and warm at the same time. Never cold, never salesy
+- Uses short sentences. Cuts anything that doesn't need to be there
+- Confident but not arrogant. She has seen what works and says it plainly
+- Occasionally uses "we" when talking about what firms are doing collectively
+- Never uses corporate phrases like "leverage", "synergies", "going forward", "touch base"
+- Australian English. Conversational but intelligent
+- Signs off with quiet authority, not a call to action energy
+
+CURRENT CONTENT TO REWRITE IN FAITH'S VOICE:
+
+Hook: ${v.hook}
+
+Signal: ${v.signal}
+
+Closer: ${v.closer}
+
+Rewrite each section in Faith's voice. Keep all facts and data intact. Do not add new claims.
+Return JSON only:
+{
+  "hook": "rewritten hook",
+  "signal": "rewritten signal",
+  "closer": "rewritten closer",
+  "voice_notes": "2 sentences on what changed and why it sounds more like Faith now"
+}`)
+
+    const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}')
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:#0d1117;border-radius:6px;padding:12px;">
+          <p style="font-size:11px;color:#475569;margin:0 0 6px;text-transform:uppercase;letter-spacing:1px;">Rewritten Hook</p>
+          <p style="font-size:13px;color:#e2e8f0;margin:0;line-height:1.7;font-style:italic;">${parsed.hook||''}</p>
+        </div>
+        <div style="background:#0d1117;border-radius:6px;padding:12px;">
+          <p style="font-size:11px;color:#475569;margin:0 0 6px;text-transform:uppercase;letter-spacing:1px;">Rewritten Signal</p>
+          <p style="font-size:13px;color:#e2e8f0;margin:0;line-height:1.7;">${(parsed.signal||'').replace(/\n/g,'<br/>')}</p>
+        </div>
+        <div style="background:#0d1117;border-radius:6px;padding:12px;">
+          <p style="font-size:11px;color:#475569;margin:0 0 6px;text-transform:uppercase;letter-spacing:1px;">Rewritten Closer</p>
+          <p style="font-size:13px;color:#e2e8f0;margin:0;line-height:1.7;font-style:italic;">${parsed.closer||''}</p>
+        </div>
+        <div style="background:#065f46;border-radius:6px;padding:10px 12px;">
+          <p style="font-size:11px;color:#6ee7b7;margin:0;">${parsed.voice_notes||''}</p>
+        </div>
+        <button class="btn btn-primary" style="font-size:12px;" onclick="applyVoice(${id},'${variantKey}',${JSON.stringify(parsed).replace(/'/g,"&apos;")})">Apply These Rewrites</button>
+      </div>`
+    botDone(`voice-btn-${id}`, 'Apply Founder Voice')
+  } catch(e) {
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = '<p style="font-size:12px;color:#ef4444;">Voice bot failed. Check your API key.</p>'
+    botDone(`voice-btn-${id}`, 'Apply Founder Voice')
+  }
+}
+
+async function applyFactCheckFixes(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const issues = window[`_factcheck_${id}`] || []
+  const flagged = issues.filter(i => i.status !== 'verified')
+  if (!flagged.length) { toast('No issues to fix'); return }
+
+  const btn = document.getElementById(`factfix-btn-${id}`)
+  if (btn) { btn.disabled = true; btn.textContent = 'Fixing...' }
+
+  const v = c.variantA
+  try {
+    const response = await callAI(`You are editing an Australian accounting newsletter. Fix ONLY the flagged claims below by either removing them, replacing them with verified data, or adding a proper source qualifier.
+
+FLAGGED ISSUES:
+${flagged.map(f => `- "${f.claim}" (${f.status}): ${f.note}`).join('\n')}
+
+VERIFIED AU DATA YOU CAN USE:
+- CA ANZ 2025: taxation accountant vacancy fill rate 59% nationally
+- Australia faces approximately 6,000 accountant shortfall by 2030
+- ABS: Australia needs 338,362 accountants by 2026
+- 42% of firms report significant retention issues
+- Average vacancy fill time: 4-5 weeks
+- ATO tightening compliance scrutiny in 2025
+
+CURRENT CONTENT:
+Hook: ${v.hook}
+Signal: ${v.signal}
+Lever Pulls: ${(v.lever_pulls||[]).join(' | ')}
+
+Rewrite only what needs fixing. Keep everything else identical.
+Return JSON only:
+{ "hook": "...", "signal": "...", "lever_pulls": ["...","...","...","...","..."] }`)
+
+    const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}')
+    if (parsed.hook) c.variantA.hook = parsed.hook
+    if (parsed.signal) c.variantA.signal = parsed.signal
+    if (parsed.lever_pulls?.length) c.variantA.lever_pulls = parsed.lever_pulls
+    save()
+    document.getElementById(`preview-a-${id}`).innerHTML = renderVariantPreview(c.variantA, c.variantA.subject_line, id, 'a')
+    toast('Fact check fixes applied to Version A')
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-run Fact Check to Confirm' }
+  } catch(e) {
+    toast('Fix failed. Try again.', 'error')
+    if (btn) { btn.disabled = false; btn.textContent = 'Fix Flagged Issues in Newsletter' }
+  }
+}
+
+async function applyValueImprovements(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const score = window[`_valuescore_${id}`] || {}
+
+  const btn = document.getElementById(`valuefix-btn-${id}`)
+  if (btn) { btn.disabled = true; btn.textContent = 'Improving...' }
+
+  const v = c.variantA
+  const fixes = [
+    score.value_density?.fix,
+    score.specificity?.fix,
+    score.reader_respect?.fix,
+  ].filter(Boolean).join('\n')
+
+  try {
+    const response = await callAI(`You are editing an Australian accounting newsletter to improve its quality based on editorial feedback.
+
+EDITORIAL FIXES TO APPLY:
+${fixes}
+
+LINE TO CUT OR REWRITE: "${score.cut_this||''}"
+
+CURRENT CONTENT:
+Hook: ${v.hook}
+Signal: ${v.signal}
+Lever Pulls: ${(v.lever_pulls||[]).join(' | ')}
+Closer: ${v.closer}
+
+Apply all the fixes above. Keep all verified data and facts. No em dashes. Australian English.
+Return JSON only:
+{ "hook": "...", "signal": "...", "lever_pulls": ["...","...","...","...","..."], "closer": "..." }`)
+
+    const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}')
+    if (parsed.hook) c.variantA.hook = parsed.hook
+    if (parsed.signal) c.variantA.signal = parsed.signal
+    if (parsed.lever_pulls?.length) c.variantA.lever_pulls = parsed.lever_pulls
+    if (parsed.closer) c.variantA.closer = parsed.closer
+    save()
+    document.getElementById(`preview-a-${id}`).innerHTML = renderVariantPreview(c.variantA, c.variantA.subject_line, id, 'a')
+    toast('Value improvements applied to Version A')
+    if (btn) { btn.disabled = false; btn.textContent = 'Re-score to Confirm' }
+  } catch(e) {
+    toast('Improvement failed. Try again.', 'error')
+    if (btn) { btn.disabled = false; btn.textContent = 'Apply Improvements to Newsletter' }
+  }
+}
+
+function applyVoice(id, variantKey, parsed) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const v = variantKey === 'a' ? c.variantA : c.variantB
+  if (!v) return
+  if (parsed.hook) v.hook = parsed.hook
+  if (parsed.signal) v.signal = parsed.signal
+  if (parsed.closer) v.closer = parsed.closer
+  save()
+  document.getElementById(`preview-${variantKey}-${id}`).innerHTML = renderVariantPreview(v, v.subject_line, id, variantKey)
+  toast('Founder voice applied')
+  document.getElementById(`voice-result-${id}`).style.display = 'none'
+}
+
+// ── Value Bot ──────────────────────────────────────────────────────
+async function runValueBot(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  botLoading(`value-btn-${id}`, 'Scoring...')
+  const resultEl = document.getElementById(`value-result-${id}`)
+
+  const v = c.variantA || {}
+  const content = `
+Hook: ${v.hook}
+Signal: ${v.signal}
+Lever Pulls: ${(v.lever_pulls||[]).join(' | ')}
+The Move: ${v.the_move}
+Closer: ${v.closer}
+  `.trim()
+
+  try {
+    const response = await callAI(`You are an editorial director evaluating a newsletter sent to Australian accounting firm principals.
+
+Score this newsletter on three dimensions, each out of 10:
+
+1. VALUE DENSITY: How much genuine, actionable intelligence does this deliver per minute of reading? Are the data points specific and sourced? Would a principal learn something they did not already know?
+
+2. SPECIFICITY: Are claims precise (named sources, actual numbers, named legislation) or vague and generic? Generic = low score.
+
+3. READER RESPECT: Does this treat the reader as an intelligent professional? Or does it over-explain, hedge, or talk down? Is every sentence earning its place?
+
+NEWSLETTER CONTENT:
+${content}
+
+Return JSON only:
+{
+  "value_density": { "score": 0-10, "verdict": "one sentence", "fix": "one specific thing to improve" },
+  "specificity": { "score": 0-10, "verdict": "one sentence", "fix": "one specific thing to improve" },
+  "reader_respect": { "score": 0-10, "verdict": "one sentence", "fix": "one specific thing to improve" },
+  "overall": 0-10,
+  "strongest_line": "copy the single best line from the newsletter",
+  "cut_this": "copy the weakest line that should be cut or rewritten"
+}`)
+
+    const parsed = JSON.parse(response.match(/\{[\s\S]*\}/)?.[0] || '{}')
+
+    function scoreColor(s) {
+      if (s >= 8) return '#10b981'
+      if (s >= 6) return '#f59e0b'
+      return '#ef4444'
+    }
+    function scoreBar(s) {
+      return `<div style="background:#1f2937;border-radius:999px;height:6px;margin:6px 0 10px;">
+        <div style="background:${scoreColor(s)};width:${s*10}%;height:100%;border-radius:999px;"></div>
+      </div>`
+    }
+
+    const dims = [
+      { key: 'value_density', label: 'Value Density' },
+      { key: 'specificity', label: 'Specificity' },
+      { key: 'reader_respect', label: 'Reader Respect' },
+    ]
+
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:#0d1117;border-radius:6px;padding:12px;text-align:center;">
+          <p style="font-size:28px;font-weight:700;color:${scoreColor(parsed.overall||0)};margin:0;">${parsed.overall||0}<span style="font-size:14px;color:#475569;">/10</span></p>
+          <p style="font-size:11px;color:#475569;margin:4px 0 0;">Overall Score</p>
+        </div>
+        ${dims.map(d => {
+          const dim = parsed[d.key] || {}
+          return `<div style="background:#0d1117;border-radius:6px;padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <p style="font-size:12px;font-weight:600;color:#94a3b8;margin:0;">${d.label}</p>
+              <span style="font-size:14px;font-weight:700;color:${scoreColor(dim.score||0)};">${dim.score||0}/10</span>
+            </div>
+            ${scoreBar(dim.score||0)}
+            <p style="font-size:12px;color:#64748b;margin:0 0 6px;">${dim.verdict||''}</p>
+            <p style="font-size:11px;color:#f59e0b;margin:0;">Fix: ${dim.fix||''}</p>
+          </div>`
+        }).join('')}
+        <div style="background:#1e3a5f;border-radius:6px;padding:10px 12px;">
+          <p style="font-size:11px;color:#93c5fd;margin:0 0 4px;font-weight:600;">Strongest line</p>
+          <p style="font-size:12px;color:#bfdbfe;margin:0;font-style:italic;">"${parsed.strongest_line||''}"</p>
+        </div>
+        <div style="background:#450a0a;border-radius:6px;padding:10px 12px;">
+          <p style="font-size:11px;color:#fca5a5;margin:0 0 4px;font-weight:600;">Cut or rewrite this</p>
+          <p style="font-size:12px;color:#fecaca;margin:0;font-style:italic;">"${parsed.cut_this||''}"</p>
+        </div>
+        <button class="btn btn-primary" style="font-size:12px;width:100%;" id="valuefix-btn-${id}" onclick="applyValueImprovements(${id})">Apply Improvements to Newsletter</button>
+      </div>`
+    window[`_valuescore_${id}`] = parsed
+    botDone(`value-btn-${id}`, 'Re-score')
+  } catch(e) {
+    resultEl.style.display = 'block'
+    resultEl.innerHTML = '<p style="font-size:12px;color:#ef4444;">Value bot failed. Check your API key.</p>'
+    botDone(`value-btn-${id}`, 'Score This Newsletter')
+  }
+}
+
+// ── Campaign Actions ───────────────────────────────────────────────
+function approveCampaign(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (c) {
+    c.status = 'approved'
+    save()
+    const result = document.getElementById('gen-result')
+    if (result && result.style.display !== 'none') result.innerHTML = renderQAPanel(c)
+    renderCampaigns()
+    refreshDashboard()
+    toast('Campaign approved — ready to send')
+  }
+}
+
+function deleteCampaign(id) {
+  if (!confirm('Delete this campaign?')) return
+  campaigns = campaigns.filter(c => c.id !== id)
+  save()
+  renderCampaigns()
+  refreshDashboard()
+  const result = document.getElementById('gen-result')
+  if (result) result.style.display = 'none'
+  toast('Campaign deleted')
+}
+
+function copyEmailHTML(id, variant='a') {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  const vData = variant === 'a' ? c.variantA : c.variantB
+  const subject = vData?.subject_line || c.title
+  const html = buildEmailHTML(vData, subject)
+  navigator.clipboard.writeText(html)
+    .then(() => toast(`Variant ${variant.toUpperCase()} HTML copied — paste into Mailchimp, Gmail, or Outlook`))
+    .catch(() => toast('Copy failed — try a different browser', 'error'))
+}
+
+function stripEmDash(t) {
+  return (t||'').replace(/—/g,',').replace(/---/g,',').replace(/--/g,',')
+}
+
+function stripSignOff(t) {
+  return (t||'')
+    .replace(/[-–,\s]*Faith\s*$/i, '')
+    .replace(/[-–,\s]*Simeon\s*$/i, '')
+    .replace(/[-–,\s]*Neta Virtual Team\s*$/i, '')
+    .trim()
+}
+
+function buildEmailHTML(v, subject, sub) {
+  if (!v) return ''
+  const stats = v.stats || [
+    { num: '59%', desc: 'Tax accountant vacancy fill rate nationally, CA ANZ 2025' },
+    { num: '6,000', desc: 'Projected AU accountant shortfall by 2030' },
+    { num: '42%', desc: 'Of firms reporting significant retention issues' },
+  ]
+  const levers = v.lever_pulls || v.takeaways || []
+  const signalParas = stripEmDash(v.signal || v.insight || '')
+    .split(/\n+/).filter(p => p.trim())
+    .map(p => `<p style="font-size:15px;line-height:1.85;color:#334155;margin:0 0 20px;font-family:Arial,sans-serif;">${p}</p>`)
+    .join('')
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>${stripEmDash(subject)}</title>
+</head>
+<body style="margin:0;padding:32px 0;background:#f4f4f5;font-family:Arial,sans-serif;">
+<div style="max-width:600px;margin:0 auto;">
+
+  <!-- HEADER -->
+  <div style="background:#075056;padding:32px 40px 28px;">
+    <p style="font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:#EBDB1E;margin:0 0 10px;font-family:Arial,sans-serif;">The Principals' Brief</p>
+    <p style="font-size:22px;font-weight:500;color:#f8fafc;margin:0;line-height:1.35;font-family:Arial,sans-serif;">${stripEmDash(subject)}</p>
+    <p style="font-size:11px;color:#8CF0DC;margin:10px 0 0;font-family:Arial,sans-serif;">${stripEmDash(v.preview_text || 'A weekly read for AU accounting principals')}</p>
+  </div>
+
+  <!-- BODY -->
+  <div style="background:#ffffff;padding:36px 40px;">
+
+    <!-- HOOK -->
+    <div style="border-left:3px solid #075056;padding:0 0 0 18px;margin:0 0 28px;">
+      <p style="font-size:17px;line-height:1.65;color:#0f172a;margin:0;font-style:italic;font-family:Arial,sans-serif;">${stripEmDash(v.hook)}</p>
+    </div>
+
+    <!-- STATS -->
+    <p style="font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin:0 0 10px;font-family:Arial,sans-serif;">What the numbers say</p>
+    <table width="100%" cellpadding="0" cellspacing="12" style="border-collapse:separate;margin:0 -12px 24px;">
+      <tr>
+        ${stats.map(s=>`<td style="background:#f0fafa;border:1px solid #b2e0dc;border-radius:6px;padding:14px 16px;width:33%;vertical-align:top;">
+          <p style="font-size:22px;font-weight:bold;color:#075056;margin:0 0 4px;font-family:Arial,sans-serif;">${s.num}</p>
+          <p style="font-size:11px;color:#64748b;margin:0;line-height:1.4;font-family:Arial,sans-serif;">${stripEmDash(s.desc)}</p>
+        </td>`).join('')}
+      </tr>
+    </table>
+
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 28px;"/>
+
+    <!-- SIGNAL -->
+    <p style="font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin:0 0 16px;font-family:Arial,sans-serif;">This week's signal</p>
+    ${signalParas}
+
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 28px;"/>
+
+    <!-- LEVER PULLS -->
+    <p style="font-size:10px;font-weight:bold;letter-spacing:2px;text-transform:uppercase;color:#94a3b8;margin:0 0 14px;font-family:Arial,sans-serif;">What to watch</p>
+    ${levers.map(t=>`
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 14px;">
+      <tr>
+        <td width="16" valign="top" style="padding-top:8px;">
+          <span style="width:5px;height:5px;border-radius:50%;background:#FF611A;display:inline-block;"></span>
+        </td>
+        <td><p style="font-size:14px;line-height:1.75;color:#334155;margin:0;font-family:Arial,sans-serif;">${stripEmDash(t)}</p></td>
+      </tr>
+    </table>`).join('')}
+
+    <!-- CTA -->
+    <div style="background:#f0fafa;border:1px solid #b2e0dc;border-radius:6px;padding:20px 22px;margin:28px 0;">
+      <p style="font-size:14px;line-height:1.6;color:#334155;margin:0 0 14px;font-family:Arial,sans-serif;">${stripEmDash(v.the_move || v.mid_cta || '')}</p>
+      <a href="https://calendly.com/simeon-netavirtualteam/30min" style="display:inline-block;font-size:13px;font-weight:bold;color:#ffffff !important;background:#FF611A;padding:10px 20px;border-radius:5px;text-decoration:none;font-family:Arial,sans-serif;">Book a 30-minute conversation</a>
+    </div>
+
+    <!-- CLOSER -->
+    <div style="border-top:1px solid #e2e8f0;padding-top:22px;margin-top:4px;">
+      <p style="font-size:15px;line-height:1.75;color:#334155;margin:0 0 16px;font-style:italic;font-family:Arial,sans-serif;">${stripEmDash(stripSignOff(v.closer || v.closing || ''))}</p>
+      <p style="font-size:12px;color:#075056;font-weight:bold;margin:0;letter-spacing:0.5px;font-family:Arial,sans-serif;">Neta Virtual Team</p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <div style="background:#075056;padding:20px 40px;">
+    <p style="font-size:11px;color:#ffffff;margin:0;font-family:Arial,sans-serif;">
+      The Principals' Brief &nbsp;&middot;&nbsp;
+      <a href="https://netavirtualteam.com.au" style="color:#EBDB1E !important;text-decoration:none;font-weight:bold;">netavirtualteam.com.au</a>
+      &nbsp;&middot;&nbsp;
+      <a href="#" style="color:#EBDB1E !important;text-decoration:none;font-weight:bold;">Unsubscribe</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`
+}
+
+// ── Render Campaigns ───────────────────────────────────────────────
+function renderCampaigns() {
+  const container = document.getElementById('campaigns-list')
+  if (!campaigns.length) {
+    container.innerHTML = `<div class="card" style="text-align:center;padding:40px;color:#475569;font-size:13px;">No campaigns yet. Go to Generate to create your first one.</div>`
+    return
+  }
+  container.innerHTML = campaigns.map(c => {
+    const sc = {pending_qa:'#f59e0b',approved:'#3b82f6',sent:'#10b981'}[c.status]||'#64748b'
+    return `<div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:start;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:600;padding:2px 10px;border-radius:999px;background:${sc}22;color:${sc};">${c.status.replace('_',' ').toUpperCase()}</span>
+            <span style="font-size:12px;color:#475569;">${new Date(c.createdAt).toLocaleDateString('en-AU')}</span>
+            ${c.sentCount ? `<span style="font-size:12px;color:#10b981;">✓ ${c.sentCount} sent</span>` : ''}
+          </div>
+          <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin:0 0 4px;">${c.title}</h3>
+          <p style="font-size:12px;color:#475569;margin:0;">A: "${c.variantA?.subject_line||''}"</p>
+          <p style="font-size:12px;color:#475569;margin:2px 0 0;">B: "${c.variantB?.subject_line||''}"</p>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+          <button class="btn btn-secondary" style="font-size:12px;" onclick="viewCampaign(${c.id})">👁 Review & Edit</button>
+          ${c.status==='pending_qa' ? `<button class="btn btn-primary" style="font-size:12px;" onclick="approveCampaign(${c.id})">✓ Approve</button>` : ''}
+          ${c.status==='approved' ? `<button class="btn btn-green" style="font-size:12px;" onclick="viewCampaign(${c.id});setTimeout(()=>openSendModal(${c.id}),300)">📤 Send</button>` : ''}
+          <button class="btn btn-danger" style="font-size:12px;" onclick="deleteCampaign(${c.id})">🗑</button>
+        </div>
+      </div>
+    </div>`
+  }).join('')
+}
+
+function viewCampaign(id) {
+  const c = campaigns.find(c => c.id === id)
+  if (!c) return
+  showPage('generate')
+  const result = document.getElementById('gen-result')
+  result.style.display = 'block'
+  result.innerHTML = renderQAPanel(c)
+  window.scrollTo(0,0)
+}
+
+// ── Subscribers ────────────────────────────────────────────────────
+function addSubscriber() {
+  const email = document.getElementById('sub-email').value.trim()
+  if (!email) { toast('Email is required','error'); return }
+  if (subscribers.find(s => s.email === email)) { toast('Already subscribed','error'); return }
+  subscribers.push({
+    email,
+    first_name: document.getElementById('sub-firstname').value.trim(),
+    last_name: document.getElementById('sub-lastname').value.trim(),
+    company: document.getElementById('sub-company').value.trim(),
+    addedAt: new Date().toISOString(),
+    source: 'manual',
+    active: true,
+  })
+  save()
+  ;['sub-email','sub-firstname','sub-lastname','sub-company'].forEach(id => document.getElementById(id).value = '')
+  toggleForm('add-sub-form')
+  renderSubscribers()
+  toast('Subscriber added')
+}
+
+function importCSV(input) {
+  const file = input.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l=>l.trim())
+    const headers = lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/['"]/g,''))
+    let created=0, skipped=0
+    for (let i=1; i<lines.length; i++) {
+      const cols = lines[i].split(',').map(c=>c.trim().replace(/['"]/g,''))
+      const row = {}
+      headers.forEach((h,idx)=>row[h]=cols[idx]||'')
+      const email = row.email||row['e-mail']||''
+      if (!email) continue
+      if (subscribers.find(s=>s.email===email)) { skipped++; continue }
+      subscribers.push({ email, first_name:row.first_name||row.firstname||'', last_name:row.last_name||row.lastname||'', company:row.company||'', addedAt:new Date().toISOString(), source:'csv', active:true })
+      created++
+    }
+    save()
+    renderSubscribers()
+    toast(`Imported: ${created} added, ${skipped} skipped`)
+  }
+  reader.readAsText(file)
+}
+
+function removeSubscriber(email) {
+  subscribers = subscribers.filter(s=>s.email!==email)
+  save()
+  renderSubscribers()
+  toast('Subscriber removed')
+}
+
+function exportSubscribers() {
+  const csv = ['email,first_name,last_name,company,source,added_at',
+    ...subscribers.map(s=>`${s.email},${s.first_name||''},${s.last_name||''},${s.company||''},${s.source},${s.addedAt}`)
+  ].join('\n')
+  const a = document.createElement('a')
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv)
+  a.download = 'subscribers.csv'
+  a.click()
+}
+
+function renderSubscribers() {
+  document.getElementById('sub-count').textContent = subscribers.length
+  const table = document.getElementById('sub-table')
+  if (!subscribers.length) {
+    table.innerHTML = '<p style="color:#475569;font-size:13px;text-align:center;padding:24px 0;">No subscribers yet.</p>'
+    return
+  }
+  table.innerHTML = `
+    <table style="width:100%;font-size:13px;border-collapse:collapse;">
+      <thead><tr style="border-bottom:1px solid #1f2937;color:#475569;font-size:12px;">
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Email</th>
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Name</th>
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Company</th>
+        <th style="text-align:left;padding-bottom:8px;font-weight:500;">Source</th>
+        <th style="padding-bottom:8px;"></th>
+      </tr></thead>
+      <tbody>${subscribers.map(s=>`
+        <tr style="border-bottom:1px solid #111827;">
+          <td style="padding:10px 0;color:#e2e8f0;">${s.email}</td>
+          <td style="padding:10px 8px;color:#64748b;">${[s.first_name,s.last_name].filter(Boolean).join(' ')||'—'}</td>
+          <td style="padding:10px 8px;color:#64748b;">${s.company||'—'}</td>
+          <td style="padding:10px 8px;"><span style="font-size:11px;background:#1f2937;color:#64748b;padding:2px 8px;border-radius:999px;">${s.source}</span></td>
+          <td style="padding:10px 0;text-align:right;"><button onclick="removeSubscriber('${s.email}')" style="background:none;border:none;color:#475569;cursor:pointer;font-size:14px;" title="Remove">✕</button></td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`
+}
+
+// ── Dashboard ──────────────────────────────────────────────────────
+function refreshDashboard() {
+  document.getElementById('stat-campaigns').textContent = campaigns.length
+  document.getElementById('stat-subscribers').textContent = subscribers.length
+  document.getElementById('stat-sent').textContent = campaigns.reduce((sum,c)=>sum+(c.sentCount||0),0)
+  const recent = campaigns.slice(0,5)
+  const el = document.getElementById('dashboard-campaigns')
+  if (!recent.length) { el.innerHTML='<p style="color:#475569;font-size:13px;text-align:center;padding:24px 0;">No campaigns yet.</p>'; return }
+  const sc = {pending_qa:'#f59e0b',approved:'#3b82f6',sent:'#10b981'}
+  el.innerHTML=`<table style="width:100%;font-size:13px;border-collapse:collapse;">
+    <thead><tr style="border-bottom:1px solid #1f2937;color:#475569;font-size:12px;">
+      <th style="text-align:left;padding-bottom:8px;font-weight:500;">Campaign</th>
+      <th style="text-align:left;padding-bottom:8px;font-weight:500;">Status</th>
+      <th style="text-align:left;padding-bottom:8px;font-weight:500;">Sent</th>
+    </tr></thead>
+    <tbody>${recent.map(c=>`<tr style="border-bottom:1px solid #111827;cursor:pointer;" onclick="viewCampaign(${c.id})">
+      <td style="padding:10px 0;color:#e2e8f0;">${c.title}</td>
+      <td style="padding:10px 8px;"><span style="font-size:11px;padding:2px 8px;border-radius:999px;background:${(sc[c.status]||'#64748b')}22;color:${sc[c.status]||'#64748b'};">${c.status.replace('_',' ')}</span></td>
+      <td style="padding:10px 0;color:#64748b;">${c.sentCount||0}</td>
+    </tr>`).join('')}</tbody>
+  </table>`
+}
+
+// ── Init ───────────────────────────────────────────────────────────
+refreshDashboard()
+loadSettings()
+if (settings.ejsPublicKey) emailjs.init(settings.ejsPublicKey)
+</script>
+</body>
+</html>
