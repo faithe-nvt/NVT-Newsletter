@@ -263,6 +263,14 @@
         <input type="file" accept=".csv" onchange="importCSV(this)" style="font-size:13px;color:#94a3b8;" />
       </div>
 
+      <div class="card" style="display:flex;flex-direction:column;gap:12px;">
+        <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin:0;">📋 Paste Emails</h3>
+        <p style="font-size:12px;color:#475569;margin:0;">Copy a column of emails from Excel, Google Sheets, or anywhere — paste them all here. One email per line.</p>
+        <textarea class="input" id="paste-emails-box" rows="6" placeholder="john@example.com&#10;sarah@firm.com.au&#10;mike@accounting.com.au&#10;..."></textarea>
+        <button class="btn btn-primary" onclick="importPastedEmails()" style="width:fit-content;font-size:13px;">Import Emails</button>
+        <div id="paste-result" style="display:none;font-size:12px;"></div>
+      </div>
+
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
           <h3 style="font-size:14px;font-weight:600;color:#e2e8f0;margin:0;">List (<span id="sub-count">0</span> subscribers)</h3>
@@ -1582,6 +1590,40 @@ function addSubscriber() {
   toggleForm('add-sub-form')
   renderSubscribers()
   toast('Subscriber added')
+}
+
+function importPastedEmails() {
+  const box = document.getElementById('paste-emails-box')
+  const resultEl = document.getElementById('paste-result')
+  const raw = box.value.trim()
+  if (!raw) { toast('Paste some emails first', 'error'); return }
+
+  const lines = raw.split(/[\n,;\t]+/).map(l => l.trim().toLowerCase()).filter(l => l)
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  let created = 0, skipped = 0, invalid = 0
+
+  for (const line of lines) {
+    if (!emailRegex.test(line)) { invalid++; continue }
+    if (subscribers.find(s => s.email === line)) { skipped++; continue }
+    subscribers.push({
+      email: line,
+      first_name: '', last_name: '', company: '',
+      addedAt: new Date().toISOString(),
+      source: 'csv', active: true
+    })
+    created++
+  }
+
+  save()
+  renderSubscribers()
+  box.value = ''
+
+  resultEl.style.display = 'block'
+  resultEl.style.color = created > 0 ? '#10b981' : '#f59e0b'
+  resultEl.textContent = `Added: ${created} | Skipped (already exist): ${skipped}${invalid ? ` | Invalid: ${invalid}` : ''}`
+
+  toast(`${created} emails imported`)
 }
 
 function importCSV(input) {
